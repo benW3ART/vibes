@@ -1,0 +1,100 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(yarn *)",
+      "Bash(bun *)",
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "Bash(vercel *)",
+      "Bash(railway *)",
+      "Bash(supabase *)",
+      "Bash(playwright *)",
+      "Bash(prisma *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(touch *)",
+      "Bash(echo *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(date *)",
+      "Bash(chmod *)",
+      "Bash(./scripts/*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(sudo *)",
+      "Bash(su *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/state-manager.py context 2>/dev/null || echo 'Genius Team v6.2 - Say \"I want to build...\" to start'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .genius/STATE.json ]; then python3 -c \"import json; s=json.load(open('.genius/STATE.json')); t=s['tasks']; print(f'Tasks: {t[\"completed\"]}/{t[\"total\"]} | Current: {t[\"current_task_id\"] or \"none\"}')\"; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .genius/STATE.json ]; then for f in DISCOVERY.xml MARKET-ANALYSIS.xml SPECIFICATIONS.xml DESIGN-SYSTEM.html design-config.json ARCHITECTURE.md .claude/plan.md; do if [ -f \"$f\" ]; then python3 -c \"import json; s=json.load(open('.genius/STATE.json')); s['artifacts']['$f']=True; json.dump(s,open('.genius/STATE.json','w'),indent=2)\" 2>/dev/null; fi; done; fi"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/state-manager.py precompact 2>/dev/null || echo 'No state to preserve'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .genius/STATE.json ]; then phase=$(python3 -c \"import json; print(json.load(open('.genius/STATE.json'))['phase'])\"); if [ \"$phase\" = \"EXECUTION\" ]; then completed=$(python3 -c \"import json; s=json.load(open('.genius/STATE.json')); print(s['tasks']['completed'])\"); total=$(python3 -c \"import json; s=json.load(open('.genius/STATE.json')); print(s['tasks']['total'])\"); if [ \"$completed\" -lt \"$total\" ]; then echo '{\"decision\":\"block\",\"reason\":\"Execution in progress: '$completed'/'$total' tasks. Say STOP to force quit.\"}'; exit 0; fi; fi; fi; echo '{\"decision\":\"approve\"}'"
+          }
+        ]
+      }
+    ]
+  }
+}

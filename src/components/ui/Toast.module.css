@@ -1,0 +1,136 @@
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+  max-width: 400px;
+  position: relative;
+  overflow: hidden;
+  animation: toastIn 0.3s ease-out;
+}
+
+.toast.exiting {
+  animation: toastOut 0.2s ease-out forwards;
+}
+
+.icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message {
+  flex: 1;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--surface-active);
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.1s linear;
+}
+
+/* Variants */
+.success {
+  border-left: 3px solid var(--success);
+}
+
+.success .icon {
+  color: var(--success);
+}
+
+.success .progressFill {
+  background: var(--success);
+}
+
+.error {
+  border-left: 3px solid var(--error);
+}
+
+.error .icon {
+  color: var(--error);
+}
+
+.error .progressFill {
+  background: var(--error);
+}
+
+.warning {
+  border-left: 3px solid var(--warning);
+}
+
+.warning .icon {
+  color: var(--warning);
+}
+
+.warning .progressFill {
+  background: var(--warning);
+}
+
+.info {
+  border-left: 3px solid var(--info);
+}
+
+.info .icon {
+  color: var(--info);
+}
+
+.info .progressFill {
+  background: var(--info);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

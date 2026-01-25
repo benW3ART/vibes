@@ -1,0 +1,1061 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<specifications 
+  project="vibes"
+  version="2.0.0"
+  date="2026-01-25"
+  status="complete"
+  author="genius-specs">
+
+  <metadata>
+    <source-documents>
+      <document type="discovery">DISCOVERY.xml v2</document>
+      <document type="mockup">vibes-v8-complete.html</document>
+    </source-documents>
+    <scope>
+      <epics-count>8</epics-count>
+      <features-count>32</features-count>
+      <screens-count>18</screens-count>
+    </scope>
+  </metadata>
+
+  <executive-summary>
+    vibes est un IDE Mac natif qui visualise l'orchestration multi-agents de Genius Team.
+    L'application expose en temps réel le travail des agents (Architect, Developer, QA, Deployer),
+    les tâches avec leurs prompts XML, les dépendances, et la structure .claude/.
+    
+    L'interface comprend 18 écrans organisés en 5 sections : Command (Dashboard, Execution, Tasks, 
+    Prompts), .claude (Plan, Skills, MCP, Settings, Memory), Build (Code, Debug, Tests), 
+    Ship (Deploy, Logs, Analytics), et System (Connections, Environment).
+    
+    Les composants clés incluent : Agent Activity Bar, Execution Bar, Mode Selector, Live Output,
+    Context Panel, Quick Actions, Chat Panel, et X-Ray Panel.
+  </executive-summary>
+
+  <!-- ================================================================
+       EPIC 1: COMMAND CENTER
+       ================================================================ -->
+  <epic id="E-001" name="Command Center" priority="P0">
+    <description>Hub central de contrôle et monitoring de l'exécution multi-agents</description>
+    
+    <!-- FEATURE: Dashboard -->
+    <feature id="F-001" name="Dashboard">
+      <description>Vue d'ensemble du projet avec état des agents et progress</description>
+      
+      <user-story id="US-001">
+        <as-a>développeur</as-a>
+        <i-want>voir l'état global de mon projet au premier coup d'œil</i-want>
+        <so-that>je sache immédiatement ce qui nécessite mon attention</so-that>
+        <acceptance-criteria>
+          <criterion>Affiche le progress global en % avec barre visuelle</criterion>
+          <criterion>Montre le nombre de tâches par statut (done, running, queued, blocked)</criterion>
+          <criterion>Liste les agents actifs avec leur tâche en cours et progress</criterion>
+          <criterion>Affiche les phases du plan avec progress par phase</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-dashboard dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-002">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions contextuelles sur le dashboard</i-want>
+        <so-that>je puisse agir rapidement sans naviguer</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Continue execution" pour reprendre</criterion>
+          <criterion>Bouton "Fix blockers" si tâches bloquées</criterion>
+          <criterion>Bouton "Create checkpoint" pour snapshot</criterion>
+          <criterion>Bouton "View full plan" vers l'écran Plan</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-003">
+        <as-a>développeur</as-a>
+        <i-want>cliquer sur une phase pour voir ses détails</i-want>
+        <so-that>je puisse naviguer rapidement vers les tâches concernées</so-that>
+        <acceptance-criteria>
+          <criterion>Clic sur phase card navigue vers Tasks filtré par phase</criterion>
+          <criterion>Phase card montre le nombre de tâches et progress</criterion>
+          <criterion>Indicateur visuel de sync status (synced, drifted, error)</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Execution View -->
+    <feature id="F-002" name="Execution View">
+      <description>Vue temps réel de l'exécution avec live output et file changes</description>
+      
+      <user-story id="US-004">
+        <as-a>développeur</as-a>
+        <i-want>voir en temps réel ce que l'agent fait</i-want>
+        <so-that>je comprenne le processus et puisse intervenir si nécessaire</so-that>
+        <acceptance-criteria>
+          <criterion>Live Output terminal avec lignes stylisées par type (thinking, action, success, error, file)</criterion>
+          <criterion>Cursor clignotant animé sur la dernière ligne</criterion>
+          <criterion>Auto-scroll vers le bas</criterion>
+          <criterion>Boutons Copy et Expand sur le terminal</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-execution .live-output dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-005">
+        <as-a>développeur</as-a>
+        <i-want>voir les fichiers créés/modifiés pendant l'exécution</i-want>
+        <so-that>je sache exactement ce qui change dans mon projet</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des file changes avec icône par type (added +, modified ~, deleted -)</criterion>
+          <criterion>Couleur par type (vert added, orange modified, rouge deleted)</criterion>
+          <criterion>Clic sur fichier ouvre dans l'écran Code</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-006">
+        <as-a>développeur</as-a>
+        <i-want>voir la queue des tâches à venir</i-want>
+        <so-that>je sache ce qui va se passer ensuite</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des prochaines tâches avec statut (running, queued, blocked)</criterion>
+          <criterion>Tâche en cours highlighted avec progress %</criterion>
+          <criterion>Tâches bloquées marquées avec icône 🔒</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-007">
+        <as-a>développeur</as-a>
+        <i-want>voir les dépendances de la tâche en cours</i-want>
+        <so-that>je comprenne le contexte et les prérequis</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des dépendances complétées (✓)</criterion>
+          <criterion>Liste des dépendances en attente (→)</criterion>
+          <criterion>Lien vers le détail de chaque dépendance</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-008">
+        <as-a>développeur</as-a>
+        <i-want>contrôler l'exécution avec des quick actions</i-want>
+        <so-that>je puisse pause, skip, ou approuver</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Pause execution" pour arrêter temporairement</criterion>
+          <criterion>Bouton "Approve current" pour valider la tâche en cours</criterion>
+          <criterion>Bouton "Skip task" pour passer à la suivante</criterion>
+          <criterion>Bouton "View prompt" pour voir le XML</criterion>
+          <criterion>Bouton "Restart task" pour recommencer</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Tasks -->
+    <feature id="F-003" name="Tasks Management">
+      <description>Liste complète des tâches avec détails et prompts</description>
+      
+      <user-story id="US-009">
+        <as-a>développeur</as-a>
+        <i-want>voir toutes les tâches de mon projet</i-want>
+        <so-that>j'aie une vue complète du travail à faire</so-that>
+        <acceptance-criteria>
+          <criterion>Liste scrollable de toutes les tâches</criterion>
+          <criterion>Chaque tâche affiche : ID, titre, agent assigné, phase, dépendances</criterion>
+          <criterion>Statut visuel : done (✓ grisé), running (▶ vert), queued (○ bleu), blocked (🔒 rouge)</criterion>
+          <criterion>Progress bar pour les tâches running</criterion>
+          <criterion>Border-left coloré par statut</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-tasks .task-card dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-010">
+        <as-a>développeur</as-a>
+        <i-want>voir les détails complets d'une tâche sélectionnée</i-want>
+        <so-that>je comprenne exactement ce qu'elle doit faire</so-that>
+        <acceptance-criteria>
+          <criterion>Panel de détails avec description complète</criterion>
+          <criterion>Liste des acceptance criteria</criterion>
+          <criterion>Tags : agent assigné, phase, dépendances</criterion>
+          <criterion>Prompt XML généré visible et copiable</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-011">
+        <as-a>développeur</as-a>
+        <i-want>voir et éditer le prompt XML de chaque tâche</i-want>
+        <so-that>je puisse comprendre et ajuster les instructions</so-that>
+        <acceptance-criteria>
+          <criterion>Prompt affiché avec syntax highlighting XML</criterion>
+          <criterion>Bouton Copy pour copier le prompt</criterion>
+          <criterion>Bouton Edit pour modifier le prompt</criterion>
+          <criterion>Structure visible : objective, context, requirements, depends, output</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-tasks .prompt-card dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-012">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour gérer les tâches</i-want>
+        <so-that>je puisse contrôler l'exécution globale</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Execute all" pour lancer toutes les tâches</criterion>
+          <criterion>Bouton "Run next" pour lancer la prochaine</criterion>
+          <criterion>Bouton "Re-prioritize" pour réordonner</criterion>
+          <criterion>Bouton "Dependency graph" pour visualiser</criterion>
+          <criterion>Bouton "Add task" pour créer manuellement</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Prompts -->
+    <feature id="F-004" name="Prompts Library">
+      <description>Bibliothèque de tous les prompts XML générés</description>
+      
+      <user-story id="US-013">
+        <as-a>développeur</as-a>
+        <i-want>voir tous les prompts générés par l'Architect</i-want>
+        <so-that>je comprenne comment le projet est structuré</so-that>
+        <acceptance-criteria>
+          <criterion>Liste de tous les prompts avec ID tâche et titre</criterion>
+          <criterion>Badge de statut (Running, Queued, Done)</criterion>
+          <criterion>Preview du contenu XML</criterion>
+          <criterion>Répartition par agent visible</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-prompts dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-014">
+        <as-a>développeur</as-a>
+        <i-want>comprendre la structure des prompts</i-want>
+        <so-that>je puisse en créer ou modifier moi-même</so-that>
+        <acceptance-criteria>
+          <criterion>Documentation du template visible (objective, context, requirements, depends, output)</criterion>
+          <criterion>Statistiques par agent (nombre de prompts)</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-015">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions sur les prompts</i-want>
+        <so-that>je puisse les générer et exporter</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Generate prompts from plan"</criterion>
+          <criterion>Bouton "Edit selected"</criterion>
+          <criterion>Bouton "Export all"</criterion>
+          <criterion>Bouton "Regenerate"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 2: .CLAUDE INTEGRATION
+       ================================================================ -->
+  <epic id="E-002" name=".claude Integration" priority="P0">
+    <description>Exposition et gestion de la structure .claude/ du projet</description>
+    
+    <!-- FEATURE: Plan -->
+    <feature id="F-005" name="Plan Viewer">
+      <description>Visualisation et gestion de .claude/plan.md</description>
+      
+      <user-story id="US-016">
+        <as-a>développeur</as-a>
+        <i-want>voir mon plan de projet avec progress par phase</i-want>
+        <so-that>je sache où j'en suis globalement</so-that>
+        <acceptance-criteria>
+          <criterion>Affichage markdown stylisé du plan</criterion>
+          <criterion>Checkboxes visuels (done ✓, in progress 🔄, pending)</criterion>
+          <criterion>Progress bar par phase</criterion>
+          <criterion>Estimation temps restant basée sur vélocité</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-plan dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-017">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions sur le plan</i-want>
+        <so-that>je puisse générer les tâches et lancer l'exécution</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Generate tasks from plan"</criterion>
+          <criterion>Bouton "Execute plan"</criterion>
+          <criterion>Bouton "Edit plan"</criterion>
+          <criterion>Bouton "Save checkpoint"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Skills -->
+    <feature id="F-006" name="Skills Manager">
+      <description>Gestion des skills dans .claude/skills/</description>
+      
+      <user-story id="US-018">
+        <as-a>développeur</as-a>
+        <i-want>voir tous les skills installés</i-want>
+        <so-that>je sache quels agents sont disponibles</so-that>
+        <acceptance-criteria>
+          <criterion>Grille de cards pour chaque skill</criterion>
+          <criterion>Chaque card : icône, nom, path, description, statut (Active/Disabled)</criterion>
+          <criterion>Distinction visuelle active vs disabled</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-skills dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-019">
+        <as-a>développeur</as-a>
+        <i-want>ajouter et gérer des skills</i-want>
+        <so-that>je puisse étendre les capacités</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Add skill"</criterion>
+          <criterion>Bouton "Import from GitHub"</criterion>
+          <criterion>Bouton "Browse library"</criterion>
+          <criterion>Bouton "Create custom"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: MCP -->
+    <feature id="F-007" name="MCP Servers">
+      <description>Gestion des serveurs MCP dans .claude/mcp.json</description>
+      
+      <user-story id="US-020">
+        <as-a>développeur</as-a>
+        <i-want>voir les serveurs MCP configurés</i-want>
+        <so-that>je sache quelles intégrations sont actives</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des serveurs avec nom, package, statut</criterion>
+          <criterion>Indicateur de connexion (Connected vert, Not configured gris)</criterion>
+          <criterion>Description de chaque serveur</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-mcp dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-021">
+        <as-a>développeur</as-a>
+        <i-want>gérer les serveurs MCP</i-want>
+        <so-that>je puisse ajouter des intégrations</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Add MCP server"</criterion>
+          <criterion>Bouton "Restart all"</criterion>
+          <criterion>Bouton "Test connections"</criterion>
+          <criterion>Bouton "Setup" pour serveurs non configurés</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Memory -->
+    <feature id="F-008" name="Project Memory">
+      <description>Gestion de la mémoire projet dans .claude/memory/</description>
+      
+      <user-story id="US-022">
+        <as-a>développeur</as-a>
+        <i-want>voir toutes les mémoires du projet</i-want>
+        <so-that>je comprenne les décisions et patterns établis</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des mémoires avec titre et type (Decision, Pattern, Convention, Lesson)</criterion>
+          <criterion>Compteur total de mémoires</criterion>
+          <criterion>Filtrage par type</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-memory dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-023">
+        <as-a>développeur</as-a>
+        <i-want>gérer les mémoires</i-want>
+        <so-that>je puisse ajouter ou nettoyer</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Add memory"</criterion>
+          <criterion>Bouton "Clear all"</criterion>
+          <criterion>Bouton "Export"</criterion>
+          <criterion>Bouton "Search"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Settings -->
+    <feature id="F-009" name="Claude Settings">
+      <description>Configuration .claude/settings.json</description>
+      
+      <user-story id="US-024">
+        <as-a>développeur</as-a>
+        <i-want>configurer les settings Claude</i-want>
+        <so-that>je contrôle le comportement de l'exécution</so-that>
+        <acceptance-criteria>
+          <criterion>Section Execution settings avec toggles</criterion>
+          <criterion>Section Model settings (model, max_tokens, temperature)</criterion>
+          <criterion>Section Project settings (root path, config directory)</criterion>
+          <criterion>Boutons Save, Reset, Export</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-settings dans vibes-v8</mockup-reference>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 3: GLOBAL COMPONENTS
+       ================================================================ -->
+  <epic id="E-003" name="Global Components" priority="P0">
+    <description>Composants présents sur tous les écrans</description>
+    
+    <!-- FEATURE: Agent Activity Bar -->
+    <feature id="F-010" name="Agent Activity Bar">
+      <description>Bandeau montrant l'état des agents en temps réel</description>
+      
+      <user-story id="US-025">
+        <as-a>développeur</as-a>
+        <i-want>voir l'état de tous les agents en permanence</i-want>
+        <so-that>je sache qui fait quoi à tout moment</so-that>
+        <acceptance-criteria>
+          <criterion>Bandeau en haut de l'écran visible sur toutes les pages</criterion>
+          <criterion>4 agents affichés : Architect 🏗️, Developer 💻, QA 🧪, Deployer 🚀</criterion>
+          <criterion>Chaque agent montre : statut, tâche en cours, progress %, dépendances</criterion>
+          <criterion>Couleurs par statut : vert (Running), orange (Waiting), rouge (Blocked)</criterion>
+          <criterion>Progress bar individuelle par agent</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.exec-bar dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-026">
+        <as-a>développeur</as-a>
+        <i-want>contrôler les agents depuis le bandeau</i-want>
+        <so-that>je puisse pause/resume rapidement</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton Pause pour arrêter l'agent</criterion>
+          <criterion>Bouton Resume pour reprendre</criterion>
+          <criterion>Bouton Watch pour voir le live output</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Execution Bar -->
+    <feature id="F-011" name="Execution Bar">
+      <description>Bandeau montrant la tâche en cours d'exécution</description>
+      
+      <user-story id="US-027">
+        <as-a>développeur</as-a>
+        <i-want>voir la tâche en cours sur tous les écrans</i-want>
+        <so-that>je sache toujours ce qui se passe</so-that>
+        <acceptance-criteria>
+          <criterion>Bandeau permanent sous le header</criterion>
+          <criterion>Indicateur de statut avec dot animé (Executing)</criterion>
+          <criterion>ID et nom de la tâche en cours</criterion>
+          <criterion>Agent actif et fichier en cours d'écriture</criterion>
+          <criterion>Progress bar avec % et estimation temps restant</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.exec-bar dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-028">
+        <as-a>développeur</as-a>
+        <i-want>des contrôles rapides sur l'execution bar</i-want>
+        <so-that>je puisse intervenir sans naviguer</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton Pause</criterion>
+          <criterion>Bouton Skip</criterion>
+          <criterion>Bouton Watch (va vers Execution screen)</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Mode Selector -->
+    <feature id="F-012" name="Execution Mode Selector">
+      <description>Sélection du mode d'exécution dans la sidebar</description>
+      
+      <user-story id="US-029">
+        <as-a>développeur</as-a>
+        <i-want>choisir le mode d'exécution</i-want>
+        <so-that>je contrôle le niveau d'autonomie des agents</so-that>
+        <acceptance-criteria>
+          <criterion>3 modes mutuellement exclusifs : Plan 📋, Ask 🤔, Auto ⚡</criterion>
+          <criterion>Plan Mode : planifie sans exécuter</criterion>
+          <criterion>Ask Mode : demande confirmation avant chaque edit (défaut)</criterion>
+          <criterion>Auto Mode : exécute automatiquement les edits safe</criterion>
+          <criterion>Mode actif highlighted visuellement</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.mode-box dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-030">
+        <as-a>développeur</as-a>
+        <i-want>activer le mode "Never Stop Until Done"</i-want>
+        <so-that>l'exécution continue jusqu'à complétion</so-that>
+        <acceptance-criteria>
+          <criterion>Toggle séparé sous les modes</criterion>
+          <criterion>Quand activé, l'agent enchaîne les tâches automatiquement</criterion>
+          <criterion>Activé par défaut</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Sidebar Navigation -->
+    <feature id="F-013" name="Sidebar Navigation">
+      <description>Navigation principale de l'application</description>
+      
+      <user-story id="US-031">
+        <as-a>développeur</as-a>
+        <i-want>naviguer facilement entre les écrans</i-want>
+        <so-that>j'accède rapidement à ce dont j'ai besoin</so-that>
+        <acceptance-criteria>
+          <criterion>Sidebar fixe à gauche avec 240px de largeur</criterion>
+          <criterion>Logo "vibes ✨" en haut</criterion>
+          <criterion>Project selector avec nom du projet et statut</criterion>
+          <criterion>Mode selector (Plan/Ask/Auto + Never Stop)</criterion>
+          <criterion>5 sections de navigation : Command, .claude, Build, Ship, System</criterion>
+          <criterion>Item actif highlighted avec couleur primary</criterion>
+          <criterion>Badges sur les items (nombre, statut, warnings)</criterion>
+          <criterion>User card en bas avec avatar et statut</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.sidebar dans vibes-v8</mockup-reference>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Chat Panel -->
+    <feature id="F-014" name="Chat Panel">
+      <description>Panel latéral de chat Claude contextuel</description>
+      
+      <user-story id="US-032">
+        <as-a>développeur</as-a>
+        <i-want>ouvrir un chat Claude contextuel</i-want>
+        <so-that>je puisse poser des questions sur l'écran actuel</so-that>
+        <acceptance-criteria>
+          <criterion>Raccourci ⌘J pour ouvrir</criterion>
+          <criterion>Panel slide-in depuis la droite (400px)</criterion>
+          <criterion>Contexte de l'écran actuel affiché</criterion>
+          <criterion>Affiche la tâche/agent en cours dans le header</criterion>
+          <criterion>Messages stylisés (user vs assistant)</criterion>
+          <criterion>Input avec bouton send</criterion>
+          <criterion>Quick actions intégrées</criterion>
+        </acceptance-criteria>
+        <mockup-reference>#chatPanel dans vibes-v8</mockup-reference>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: X-Ray Panel -->
+    <feature id="F-015" name="X-Ray Panel">
+      <description>Panel d'inspection détaillée de l'exécution</description>
+      
+      <user-story id="US-033">
+        <as-a>développeur</as-a>
+        <i-want>inspecter en détail ce qui se passe</i-want>
+        <so-that>je comprenne le contexte complet</so-that>
+        <acceptance-criteria>
+          <criterion>Raccourci ⌘I pour ouvrir</criterion>
+          <criterion>Panel slide-in depuis la droite</criterion>
+          <criterion>Section "Current Execution" avec tâche et progress</criterion>
+          <criterion>Section "File Being Written" avec path et lignes écrites</criterion>
+          <criterion>Section "Task Dependencies" avec statuts</criterion>
+          <criterion>Section "Prompt Used" avec aperçu XML</criterion>
+          <criterion>Quick Actions : Approve, Pause, View Full Prompt</criterion>
+        </acceptance-criteria>
+        <mockup-reference>#xrayPanel dans vibes-v8</mockup-reference>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Quick Actions -->
+    <feature id="F-016" name="Quick Actions Bar">
+      <description>Barre d'actions contextuelles sur chaque écran</description>
+      
+      <user-story id="US-034">
+        <as-a>développeur</as-a>
+        <i-want>des actions rapides adaptées à chaque écran</i-want>
+        <so-that>je puisse agir sans ouvrir le chat</so-that>
+        <acceptance-criteria>
+          <criterion>Barre horizontale en haut du contenu</criterion>
+          <criterion>Actions contextuelles selon l'écran actif</criterion>
+          <criterion>Bouton primary pour l'action principale</criterion>
+          <criterion>Clic sur action ouvre le chat avec le contexte</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.quick-actions dans vibes-v8</mockup-reference>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 4: BUILD
+       ================================================================ -->
+  <epic id="E-004" name="Build" priority="P1">
+    <description>Écrans de développement, debug et tests</description>
+    
+    <!-- FEATURE: Code -->
+    <feature id="F-017" name="Code Editor">
+      <description>IDE avec context panel montrant la tâche en cours</description>
+      
+      <user-story id="US-035">
+        <as-a>développeur</as-a>
+        <i-want>voir le code avec le contexte de la tâche</i-want>
+        <so-that>je comprenne ce qui est généré et pourquoi</so-that>
+        <acceptance-criteria>
+          <criterion>Layout 3 colonnes : file tree, code editor, context panel</criterion>
+          <criterion>File tree avec structure projet et fichiers modifiés highlighted</criterion>
+          <criterion>Code editor avec syntax highlighting et line numbers</criterion>
+          <criterion>Lignes en cours d'écriture highlighted (background différent)</criterion>
+          <criterion>Tabs pour fichiers ouverts avec indicateur de modification</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-code .code-layout dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-036">
+        <as-a>développeur</as-a>
+        <i-want>voir le context panel avec la tâche en cours</i-want>
+        <so-that>je comprenne les requirements pendant que je regarde le code</so-that>
+        <acceptance-criteria>
+          <criterion>Section "Current Task" avec ID, titre, progress</criterion>
+          <criterion>Section "Requirements" avec checklist (✓ done, ○ pending)</criterion>
+          <criterion>Section "Related Files" avec liens</criterion>
+          <criterion>Section "Architecture Decision" avec ADR applicable</criterion>
+        </acceptance-criteria>
+        <mockup-reference>.context-panel dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-037">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour le code</i-want>
+        <so-that>je puisse reviewer et tester</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "AI review" pour analyse du code</criterion>
+          <criterion>Bouton "Run dev server"</criterion>
+          <criterion>Bouton "Refactor"</criterion>
+          <criterion>Bouton "Find issues"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Debug -->
+    <feature id="F-018" name="Debug">
+      <description>Analyse et résolution des erreurs</description>
+      
+      <user-story id="US-038">
+        <as-a>développeur</as-a>
+        <i-want>voir toutes les erreurs avec analyse</i-want>
+        <so-that>je puisse les corriger rapidement</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des erreurs avec type, message, fichier:ligne</criterion>
+          <criterion>Couleur rouge pour les erreurs</criterion>
+          <criterion>Bouton "Fix" par erreur pour correction automatique</criterion>
+          <criterion>Compteur total d'erreurs dans le badge nav</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-debug dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-039">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour le debug</i-want>
+        <so-that>je puisse corriger en masse</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "AI fix all" pour corriger toutes les erreurs</criterion>
+          <criterion>Bouton "Fix selected"</criterion>
+          <criterion>Bouton "Copy stack trace"</criterion>
+          <criterion>Bouton "Deep analysis"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Tests -->
+    <feature id="F-019" name="Tests">
+      <description>Gestion des tests et coverage</description>
+      
+      <user-story id="US-040">
+        <as-a>développeur</as-a>
+        <i-want>voir les résultats de tests avec métriques</i-want>
+        <so-that>je sache si mon code fonctionne</so-that>
+        <acceptance-criteria>
+          <criterion>Compteurs : Total, Pass (vert), Fail (rouge), Coverage %</criterion>
+          <criterion>Liste des tests avec statut (✅ pass, ❌ fail)</criterion>
+          <criterion>Durée d'exécution par test</criterion>
+          <criterion>Bouton "Fix" pour les tests échoués</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-tests dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-041">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour les tests</i-want>
+        <so-that>je puisse générer et exécuter</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Run all"</criterion>
+          <criterion>Bouton "Generate missing tests"</criterion>
+          <criterion>Bouton "Re-run failed"</criterion>
+          <criterion>Bouton "Coverage report"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 5: SHIP
+       ================================================================ -->
+  <epic id="E-005" name="Ship" priority="P1">
+    <description>Écrans de déploiement, logs et analytics</description>
+    
+    <!-- FEATURE: Deploy -->
+    <feature id="F-020" name="Deploy">
+      <description>Gestion des déploiements staging et production</description>
+      
+      <user-story id="US-042">
+        <as-a>développeur</as-a>
+        <i-want>voir l'état de mes environnements</i-want>
+        <so-that>je sache ce qui est déployé</so-that>
+        <acceptance-criteria>
+          <criterion>Card Staging avec statut (Building, Live, Error)</criterion>
+          <criterion>Card Production avec statut et version</criterion>
+          <criterion>Progress bar pour les builds en cours</criterion>
+          <criterion>Indicateur de succès/échec</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-deploy dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-043">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour déployer</i-want>
+        <so-that>je puisse ship rapidement</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Deploy production"</criterion>
+          <criterion>Bouton "Deploy staging"</criterion>
+          <criterion>Bouton "Rollback"</criterion>
+          <criterion>Bouton "View metrics"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Logs -->
+    <feature id="F-021" name="Logs">
+      <description>Logs temps réel de l'application</description>
+      
+      <user-story id="US-044">
+        <as-a>développeur</as-a>
+        <i-want>voir les logs en temps réel</i-want>
+        <so-that>je puisse debugger en production</so-that>
+        <acceptance-criteria>
+          <criterion>Terminal style avec timestamp, level, message</criterion>
+          <criterion>Couleurs par level (dim normal, orange warn, rouge error)</criterion>
+          <criterion>Auto-scroll avec pause possible</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-logs dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-045">
+        <as-a>développeur</as-a>
+        <i-want>filtrer et contrôler les logs</i-want>
+        <so-that>je trouve ce que je cherche</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Pause" pour arrêter le stream</criterion>
+          <criterion>Bouton "Errors only" pour filtrer</criterion>
+          <criterion>Bouton "Clear"</criterion>
+          <criterion>Bouton "Export"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Analytics -->
+    <feature id="F-022" name="Analytics">
+      <description>Métriques d'usage et performance</description>
+      
+      <user-story id="US-046">
+        <as-a>développeur</as-a>
+        <i-want>voir les métriques de mon app</i-want>
+        <so-that>je sache comment elle performe</so-that>
+        <acceptance-criteria>
+          <criterion>Graphiques de métriques clés</criterion>
+          <criterion>Période sélectionnable</criterion>
+          <criterion>Comparaison avec période précédente</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 6: SYSTEM
+       ================================================================ -->
+  <epic id="E-006" name="System" priority="P2">
+    <description>Configuration système et connexions</description>
+    
+    <!-- FEATURE: Connections -->
+    <feature id="F-023" name="Connections">
+      <description>APIs et services connectés</description>
+      
+      <user-story id="US-047">
+        <as-a>développeur</as-a>
+        <i-want>voir toutes mes connexions externes</i-want>
+        <so-that>je sache quels services sont actifs</so-that>
+        <acceptance-criteria>
+          <criterion>Grille de cards pour chaque connexion</criterion>
+          <criterion>Statut Connected (vert) ou Not connected</criterion>
+          <criterion>Claude API, GitHub, Vercel, etc.</criterion>
+        </acceptance-criteria>
+        <mockup-reference>screen-connections dans vibes-v8</mockup-reference>
+      </user-story>
+      
+      <user-story id="US-048">
+        <as-a>développeur</as-a>
+        <i-want>gérer mes connexions</i-want>
+        <so-that>je puisse ajouter des services</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Add connection"</criterion>
+          <criterion>Bouton "Test all"</criterion>
+          <criterion>Bouton "Refresh tokens"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+    
+    <!-- FEATURE: Environment -->
+    <feature id="F-024" name="Environment Variables">
+      <description>Gestion des variables d'environnement</description>
+      
+      <user-story id="US-049">
+        <as-a>développeur</as-a>
+        <i-want>gérer mes variables d'environnement</i-want>
+        <so-that>je puisse configurer mon projet</so-that>
+        <acceptance-criteria>
+          <criterion>Liste des variables avec nom, valeur masquée, statut</criterion>
+          <criterion>Bouton "?" pour aide sur comment obtenir la clé</criterion>
+          <criterion>Indicateur si variable manquante</criterion>
+        </acceptance-criteria>
+      </user-story>
+      
+      <user-story id="US-050">
+        <as-a>développeur</as-a>
+        <i-want>des quick actions pour l'environnement</i-want>
+        <so-that>je puisse importer/exporter</so-that>
+        <acceptance-criteria>
+          <criterion>Bouton "Add variable"</criterion>
+          <criterion>Bouton "Import .env"</criterion>
+          <criterion>Bouton "Export"</criterion>
+          <criterion>Bouton "Sync to Vercel"</criterion>
+        </acceptance-criteria>
+      </user-story>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 7: DESIGN SYSTEM
+       ================================================================ -->
+  <epic id="E-007" name="Design System" priority="P0">
+    <description>Système de design visuel de l'application</description>
+    
+    <feature id="F-025" name="Visual Design">
+      <description>Style glassmorphism premium</description>
+      
+      <design-tokens>
+        <colors>
+          <color name="primary" value="#f97316">Orange - actions principales</color>
+          <color name="secondary" value="#ec4899">Pink - gradient secondaire</color>
+          <color name="bg" value="#050508">Background principal</color>
+          <color name="surface" value="rgba(255,255,255,0.02)">Surfaces cards</color>
+          <color name="border" value="rgba(255,255,255,0.06)">Bordures subtiles</color>
+          <color name="text" value="#ffffff">Texte principal</color>
+          <color name="text-muted" value="#a0a0a0">Texte secondaire</color>
+          <color name="success" value="#22c55e">Vert - succès, running</color>
+          <color name="warning" value="#f59e0b">Orange - attention, waiting</color>
+          <color name="error" value="#ef4444">Rouge - erreur, blocked</color>
+          <color name="info" value="#3b82f6">Bleu - info, queued</color>
+          <color name="purple" value="#a78bfa">Violet - prompts, dependencies</color>
+        </colors>
+        
+        <typography>
+          <font name="display" value="Space Grotesk">Titres et logo</font>
+          <font name="body" value="Inter">Corps de texte</font>
+          <font name="code" value="JetBrains Mono">Code et terminal</font>
+        </typography>
+        
+        <effects>
+          <effect name="glassmorphism">backdrop-filter: blur(30px)</effect>
+          <effect name="gradient">linear-gradient(135deg, #f97316, #ec4899)</effect>
+          <effect name="glow">box-shadow: 0 0 20px rgba(249,115,22,0.4)</effect>
+          <effect name="pulse">Animation pour indicateurs actifs</effect>
+        </effects>
+        
+        <spacing>
+          <space name="radius" value="12px">Border radius standard</space>
+          <space name="radius-lg" value="16px">Border radius large</space>
+        </spacing>
+      </design-tokens>
+    </feature>
+    
+    <feature id="F-026" name="Component Library">
+      <description>Composants réutilisables</description>
+      
+      <components>
+        <component name="Card">Background glassmorphism avec border subtile</component>
+        <component name="Button">Primary (gradient), Secondary, Ghost</component>
+        <component name="Badge">Couleur selon statut, compteurs</component>
+        <component name="Toggle">Switch on/off avec animation</component>
+        <component name="Progress Bar">Gradient fill avec animation</component>
+        <component name="Task Card">Border-left coloré, checkbox, tags</component>
+        <component name="Prompt Card">Header coloré, content code</component>
+        <component name="List Item">Icon, content, action, border-left status</component>
+        <component name="Nav Item">Icon, label, badge, active state</component>
+        <component name="Panel">Slide-in depuis droite, overlay</component>
+      </components>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       EPIC 8: TECHNICAL ARCHITECTURE
+       ================================================================ -->
+  <epic id="E-008" name="Technical Foundation" priority="P0">
+    <description>Architecture technique de base</description>
+    
+    <feature id="F-027" name="Application Shell">
+      <description>Structure de base de l'application</description>
+      
+      <technical-requirements>
+        <requirement>Application Mac native (à définir : Swift vs Electron vs Tauri)</requirement>
+        <requirement>Sidebar navigation persistante</requirement>
+        <requirement>Main content area avec routing par écran</requirement>
+        <requirement>Panel system (Chat, X-Ray) avec overlay</requirement>
+        <requirement>State management global</requirement>
+        <requirement>Keyboard shortcuts (⌘J, ⌘I, ⌘S)</requirement>
+      </technical-requirements>
+    </feature>
+    
+    <feature id="F-028" name="Claude Code Integration">
+      <description>Intégration avec Claude Code CLI</description>
+      
+      <technical-requirements>
+        <requirement>Spawn process Claude Code CLI</requirement>
+        <requirement>Capture stdout/stderr pour live output</requirement>
+        <requirement>Parse les événements (file write, thinking, etc.)</requirement>
+        <requirement>Lecture de .claude/ pour plan, skills, mcp, memory</requirement>
+        <requirement>Envoi de commandes (pause, skip, etc.)</requirement>
+      </technical-requirements>
+    </feature>
+    
+    <feature id="F-029" name="Task System">
+      <description>Système de gestion des tâches</description>
+      
+      <technical-requirements>
+        <requirement>Parsing des tâches depuis plan.md ou PROMPTS.xml</requirement>
+        <requirement>Tracking du statut (done, running, queued, blocked)</requirement>
+        <requirement>Résolution des dépendances</requirement>
+        <requirement>Progress tracking par tâche</requirement>
+        <requirement>Génération de prompts XML</requirement>
+      </technical-requirements>
+    </feature>
+    
+    <feature id="F-030" name="Real-time Updates">
+      <description>Mises à jour temps réel de l'UI</description>
+      
+      <technical-requirements>
+        <requirement>Live output streaming depuis Claude Code</requirement>
+        <requirement>File watcher sur .claude/ et src/</requirement>
+        <requirement>Animations de progress fluides</requirement>
+        <requirement>Notifications de changements</requirement>
+      </technical-requirements>
+    </feature>
+  </epic>
+
+  <!-- ================================================================
+       NON-FUNCTIONAL REQUIREMENTS
+       ================================================================ -->
+  <non-functional-requirements>
+    <performance>
+      <requirement>Startup time &lt; 3 secondes</requirement>
+      <requirement>Navigation entre écrans &lt; 100ms</requirement>
+      <requirement>Live output sans lag perceptible</requirement>
+      <requirement>Animations 60fps</requirement>
+    </performance>
+    
+    <usability>
+      <requirement>Accessible sans documentation</requirement>
+      <requirement>Keyboard shortcuts pour actions fréquentes</requirement>
+      <requirement>États visuels clairs (loading, success, error)</requirement>
+    </usability>
+    
+    <compatibility>
+      <requirement>macOS 13+ (Ventura)</requirement>
+      <requirement>Support Apple Silicon et Intel</requirement>
+      <requirement>Compatible Claude Code v2+</requirement>
+    </compatibility>
+  </non-functional-requirements>
+
+  <!-- ================================================================
+       SCREEN INVENTORY
+       ================================================================ -->
+  <screen-inventory>
+    <section name="Command">
+      <screen id="S-001" name="Dashboard" feature="F-001" priority="P0"/>
+      <screen id="S-002" name="Execution" feature="F-002" priority="P0"/>
+      <screen id="S-003" name="Tasks" feature="F-003" priority="P0"/>
+      <screen id="S-004" name="Prompts" feature="F-004" priority="P0"/>
+    </section>
+    <section name=".claude">
+      <screen id="S-005" name="Plan" feature="F-005" priority="P0"/>
+      <screen id="S-006" name="Skills" feature="F-006" priority="P1"/>
+      <screen id="S-007" name="MCP" feature="F-007" priority="P1"/>
+      <screen id="S-008" name="Settings" feature="F-009" priority="P1"/>
+      <screen id="S-009" name="Memory" feature="F-008" priority="P1"/>
+    </section>
+    <section name="Build">
+      <screen id="S-010" name="Code" feature="F-017" priority="P0"/>
+      <screen id="S-011" name="Debug" feature="F-018" priority="P1"/>
+      <screen id="S-012" name="Tests" feature="F-019" priority="P1"/>
+    </section>
+    <section name="Ship">
+      <screen id="S-013" name="Deploy" feature="F-020" priority="P1"/>
+      <screen id="S-014" name="Logs" feature="F-021" priority="P2"/>
+      <screen id="S-015" name="Analytics" feature="F-022" priority="P2"/>
+    </section>
+    <section name="System">
+      <screen id="S-016" name="Connections" feature="F-023" priority="P2"/>
+      <screen id="S-017" name="Environment" feature="F-024" priority="P2"/>
+    </section>
+    <global-components>
+      <component id="C-001" name="Agent Activity Bar" feature="F-010" priority="P0"/>
+      <component id="C-002" name="Execution Bar" feature="F-011" priority="P0"/>
+      <component id="C-003" name="Mode Selector" feature="F-012" priority="P0"/>
+      <component id="C-004" name="Sidebar" feature="F-013" priority="P0"/>
+      <component id="C-005" name="Chat Panel" feature="F-014" priority="P0"/>
+      <component id="C-006" name="X-Ray Panel" feature="F-015" priority="P0"/>
+      <component id="C-007" name="Quick Actions" feature="F-016" priority="P0"/>
+    </global-components>
+  </screen-inventory>
+
+  <!-- ================================================================
+       HANDOFF SUMMARY
+       ================================================================ -->
+  <handoff-summary>
+    <overview>
+      vibes est un IDE Mac natif pour visualiser et contrôler l'orchestration multi-agents 
+      de Genius Team. 8 Epics, 30 Features, 50 User Stories, 17 écrans + 7 composants globaux.
+      
+      La proposition de valeur clé : transformer la "boîte noire" du terminal Claude Code 
+      en un cockpit visuel où l'utilisateur voit exactement ce que les agents font, 
+      quels prompts sont exécutés, et peut contrôler l'exécution à tout moment.
+    </overview>
+    
+    <scope>
+      <epics-count>8</epics-count>
+      <features-count>30</features-count>
+      <user-stories-count>50</user-stories-count>
+      <screens-count>17</screens-count>
+      <components-count>7</components-count>
+    </scope>
+    
+    <key-differentiators>
+      <differentiator>Visualisation multi-agents temps réel</differentiator>
+      <differentiator>Prompts XML visibles et éditables</differentiator>
+      <differentiator>Dépendances entre tâches visibles</differentiator>
+      <differentiator>Exposition complète de .claude/</differentiator>
+      <differentiator>Modes d'exécution configurables</differentiator>
+      <differentiator>Live output stylisé</differentiator>
+      <differentiator>Context panel dans l'éditeur code</differentiator>
+    </key-differentiators>
+    
+    <priority-order>
+      <phase name="P0 - Core">
+        Dashboard, Execution, Tasks, Prompts, Plan, Code
+        + tous les composants globaux (bars, panels, navigation)
+      </phase>
+      <phase name="P1 - Extended">
+        Skills, MCP, Memory, Settings, Debug, Tests, Deploy
+      </phase>
+      <phase name="P2 - Polish">
+        Logs, Analytics, Connections, Environment
+      </phase>
+    </priority-order>
+    
+    <technical-decisions-needed>
+      <decision>Framework UI : Swift natif vs Electron vs Tauri</decision>
+      <decision>Intégration Claude Code : CLI spawn vs API directe</decision>
+      <decision>Storage : Format de persistance des états</decision>
+    </technical-decisions-needed>
+    
+    <mockup-reference>
+      vibes-v8-complete.html contient l'implémentation HTML/CSS/JS complète 
+      de tous les écrans et interactions. Utiliser comme référence visuelle 
+      pour le développement.
+    </mockup-reference>
+  </handoff-summary>
+
+</specifications>

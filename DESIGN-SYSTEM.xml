@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<design-system 
+  project="vibes"
+  version="1.0.0"
+  date="2026-01-25"
+  source="vibes-v8-complete.html">
+
+  <!-- ================================================================
+       COLOR PALETTE
+       ================================================================ -->
+  <colors>
+    <color-group name="Brand">
+      <color name="primary" value="#f97316" usage="Actions principales, accents, gradient start"/>
+      <color name="secondary" value="#ec4899" usage="Gradient end, accents secondaires"/>
+      <color name="gradient" value="linear-gradient(135deg, #f97316, #ec4899)" usage="Boutons primary, logo, highlights"/>
+    </color-group>
+    
+    <color-group name="Background">
+      <color name="bg" value="#050508" usage="Background principal de l'app"/>
+      <color name="surface" value="rgba(255,255,255,0.02)" usage="Cards, surfaces élevées"/>
+      <color name="surface-solid" value="#0a0a0f" usage="Sidebar, panels (avec backdrop-filter)"/>
+      <color name="surface-hover" value="rgba(255,255,255,0.05)" usage="Hover state des surfaces"/>
+      <color name="surface-active" value="rgba(255,255,255,0.08)" usage="Active state, toggle off"/>
+    </color-group>
+    
+    <color-group name="Border">
+      <color name="border" value="rgba(255,255,255,0.06)" usage="Bordures subtiles par défaut"/>
+      <color name="border-light" value="rgba(255,255,255,0.12)" usage="Bordures hover, plus visibles"/>
+    </color-group>
+    
+    <color-group name="Text">
+      <color name="text" value="#ffffff" usage="Texte principal"/>
+      <color name="text-muted" value="#a0a0a0" usage="Texte secondaire, descriptions"/>
+      <color name="text-dim" value="#505050" usage="Labels, placeholders, désactivé"/>
+    </color-group>
+    
+    <color-group name="Status">
+      <color name="success" value="#22c55e" usage="Running, connected, pass, done"/>
+      <color name="warning" value="#f59e0b" usage="Waiting, drift, attention"/>
+      <color name="error" value="#ef4444" usage="Blocked, fail, erreurs"/>
+      <color name="info" value="#3b82f6" usage="Queued, info, liens"/>
+      <color name="purple" value="#a78bfa" usage="Prompts, dependencies, code"/>
+      <color name="cyan" value="#06b6d4" usage="Accent alternatif"/>
+    </color-group>
+    
+    <color-group name="Status Backgrounds">
+      <color name="success-bg" value="rgba(34,197,94,0.1)" usage="Background success subtle"/>
+      <color name="success-bg-strong" value="rgba(34,197,94,0.15)" usage="Badge success"/>
+      <color name="warning-bg" value="rgba(245,158,11,0.1)" usage="Background warning subtle"/>
+      <color name="warning-bg-strong" value="rgba(245,158,11,0.15)" usage="Badge warning"/>
+      <color name="error-bg" value="rgba(239,68,68,0.1)" usage="Background error subtle"/>
+      <color name="error-bg-strong" value="rgba(239,68,68,0.15)" usage="Badge error"/>
+      <color name="info-bg" value="rgba(59,130,246,0.1)" usage="Background info subtle"/>
+      <color name="info-bg-strong" value="rgba(59,130,246,0.15)" usage="Badge info"/>
+      <color name="primary-bg" value="rgba(249,115,22,0.1)" usage="Background primary subtle"/>
+      <color name="primary-bg-strong" value="rgba(249,115,22,0.15)" usage="Active nav item"/>
+      <color name="purple-bg" value="rgba(167,139,250,0.1)" usage="Background prompts"/>
+    </color-group>
+  </colors>
+
+  <!-- ================================================================
+       TYPOGRAPHY
+       ================================================================ -->
+  <typography>
+    <font-family name="display" value="'Space Grotesk', sans-serif" usage="Logo, titres principaux"/>
+    <font-family name="body" value="'Inter', sans-serif" usage="Corps de texte, UI"/>
+    <font-family name="code" value="'JetBrains Mono', monospace" usage="Code, terminal, IDs"/>
+    
+    <font-weights>
+      <weight value="300" name="light"/>
+      <weight value="400" name="regular"/>
+      <weight value="500" name="medium"/>
+      <weight value="600" name="semibold"/>
+      <weight value="700" name="bold"/>
+    </font-weights>
+    
+    <font-sizes>
+      <size name="2xs" value="0.52rem" px="8.3px" usage="Nav titles, très petits labels"/>
+      <size name="xs" value="0.55rem" px="8.8px" usage="Mode label"/>
+      <size name="xs-2" value="0.58rem" px="9.3px" usage="Section titles, task tags"/>
+      <size name="sm" value="0.6rem" px="9.6px" usage="User status, timestamps"/>
+      <size name="sm-2" value="0.62rem" px="9.9px" usage="Project status, mode buttons"/>
+      <size name="sm-3" value="0.65rem" px="10.4px" usage="Task details, KPI labels"/>
+      <size name="sm-4" value="0.68rem" px="10.9px" usage="Mode toggle, exec buttons"/>
+      <size name="base-sm" value="0.7rem" px="11.2px" usage="Buttons, shortcuts"/>
+      <size name="base" value="0.72rem" px="11.5px" usage="Exec label, file items, code"/>
+      <size name="base-2" value="0.75rem" px="12px" usage="Nav items, chat messages"/>
+      <size name="base-3" value="0.78rem" px="12.5px" usage="User name, task titles, prompts"/>
+      <size name="md" value="0.8rem" px="12.8px" usage="Project name, item titles"/>
+      <size name="md-2" value="0.82rem" px="13.1px" usage="Phase names, task titles"/>
+      <size name="md-3" value="0.85rem" px="13.6px" usage="Nav icons, skill names"/>
+      <size name="md-4" value="0.88rem" px="14.1px" usage="Card titles"/>
+      <size name="lg" value="0.9rem" px="14.4px" usage="Panel titles"/>
+      <size name="lg-2" value="1rem" px="16px" usage="Main title, exec task icon"/>
+      <size name="xl" value="1.2rem" px="19.2px" usage="Logo"/>
+      <size name="2xl" value="1.5rem" px="24px" usage="Stats numbers"/>
+      <size name="3xl" value="1.8rem" px="28.8px" usage="Big stats, counters"/>
+    </font-sizes>
+    
+    <line-heights>
+      <line-height value="1" usage="Icons, single line"/>
+      <line-height value="1.5" usage="Chat messages"/>
+      <line-height value="1.6" usage="Descriptions, paragraphs"/>
+      <line-height value="1.7" usage="Code editor"/>
+      <line-height value="1.8" usage="Plan markdown"/>
+    </line-heights>
+    
+    <letter-spacing>
+      <spacing value="1px" usage="Section titles"/>
+      <spacing value="1.5px" usage="Nav titles, mode labels (uppercase)"/>
+    </letter-spacing>
+  </typography>
+
+  <!-- ================================================================
+       SPACING
+       ================================================================ -->
+  <spacing>
+    <space name="2xs" value="2px" usage="Badge padding vertical"/>
+    <space name="xs" value="3px" usage="Mode row gap"/>
+    <space name="sm" value="4px" usage="Small gaps, header actions"/>
+    <space name="sm-2" value="5px" usage="Badge padding horizontal"/>
+    <space name="md" value="6px" usage="Nav padding, small gaps"/>
+    <space name="md-2" value="8px" usage="Standard padding, gaps"/>
+    <space name="lg" value="10px" usage="Mode box padding, card gaps"/>
+    <space name="lg-2" value="12px" usage="Card padding, section gaps"/>
+    <space name="xl" value="14px" usage="Sidebar header, panel header"/>
+    <space name="2xl" value="16px" usage="Main content padding, large gaps"/>
+    <space name="3xl" value="20px" usage="Dashboard stat gaps"/>
+  </spacing>
+
+  <!-- ================================================================
+       BORDER RADIUS
+       ================================================================ -->
+  <border-radius>
+    <radius name="xs" value="2px" usage="Progress bar"/>
+    <radius name="sm" value="3px" usage="Shortcut badges"/>
+    <radius name="sm-2" value="4px" usage="Task tags, chat context"/>
+    <radius name="md" value="5px" usage="Mode buttons, file items"/>
+    <radius name="md-2" value="6px" usage="Nav items, badges, small buttons"/>
+    <radius name="lg" value="8px" usage="Project selector, buttons, cards small"/>
+    <radius name="xl" value="12px" usage="Cards, chat bubbles (var --radius)"/>
+    <radius name="2xl" value="16px" usage="Large cards (var --radius-lg)"/>
+    <radius name="full" value="18px" usage="Toggle slider"/>
+    <radius name="circle" value="50%" usage="Dots, avatars ronds, orbs"/>
+  </border-radius>
+
+  <!-- ================================================================
+       SHADOWS & EFFECTS
+       ================================================================ -->
+  <effects>
+    <effect name="glassmorphism">
+      <property>backdrop-filter: blur(30px)</property>
+      <property>background: rgba(10,10,15,0.9)</property>
+      <usage>Sidebar, panels</usage>
+    </effect>
+    
+    <effect name="glow-primary">
+      <property>box-shadow: 0 0 20px rgba(249,115,22,0.4)</property>
+      <usage>Primary button hover</usage>
+    </effect>
+    
+    <effect name="glow-success">
+      <property>box-shadow: 0 0 8px var(--success)</property>
+      <usage>Project dot, status indicators</usage>
+    </effect>
+    
+    <effect name="glow-success-small">
+      <property>box-shadow: 0 0 6px var(--success)</property>
+      <usage>Sync dot</usage>
+    </effect>
+    
+    <effect name="panel-shadow">
+      <property>box-shadow: -10px 0 40px rgba(0,0,0,0.5)</property>
+      <usage>Panels ouverts</usage>
+    </effect>
+    
+    <effect name="card-hover-shadow">
+      <property>box-shadow: 0 8px 20px rgba(0,0,0,0.3)</property>
+      <usage>Phase cards hover</usage>
+    </effect>
+    
+    <effect name="orb-blur">
+      <property>filter: blur(100px)</property>
+      <property>opacity: 0.15</property>
+      <usage>Ambient orbs background</usage>
+    </effect>
+  </effects>
+
+  <!-- ================================================================
+       ANIMATIONS
+       ================================================================ -->
+  <animations>
+    <animation name="pulse">
+      <keyframes>
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+      </keyframes>
+      <duration>1s - 2s</duration>
+      <timing>infinite</timing>
+      <usage>Status dots, live badges</usage>
+    </animation>
+    
+    <animation name="orbFloat">
+      <keyframes>
+        0%, 100% { transform: translate(0,0); }
+        50% { transform: translate(30px,-30px); }
+      </keyframes>
+      <duration>20s</duration>
+      <timing>ease-in-out infinite</timing>
+      <usage>Background ambient orbs</usage>
+    </animation>
+    
+    <animation name="screenIn">
+      <keyframes>
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      </keyframes>
+      <duration>0.25s</duration>
+      <timing>ease</timing>
+      <usage>Screen transitions</usage>
+    </animation>
+    
+    <animation name="msgIn">
+      <keyframes>
+        from { opacity: 0; transform: translateY(8px); }
+      </keyframes>
+      <duration>0.2s</duration>
+      <timing>ease</timing>
+      <usage>Chat messages appearing</usage>
+    </animation>
+    
+    <animation name="blink">
+      <keyframes>
+        50% { border-color: transparent; }
+      </keyframes>
+      <duration>1s</duration>
+      <timing>infinite</timing>
+      <usage>Live cursor in terminal</usage>
+    </animation>
+    
+    <animation name="typing">
+      <keyframes>
+        from { width: 0; }
+        to { width: 100%; }
+      </keyframes>
+      <usage>Typing effect (not used in v8)</usage>
+    </animation>
+  </animations>
+
+  <!-- ================================================================
+       TRANSITIONS
+       ================================================================ -->
+  <transitions>
+    <transition name="fast" value="0.15s" usage="Nav items, quick interactions"/>
+    <transition name="normal" value="0.2s" usage="Buttons, cards, most elements"/>
+    <transition name="medium" value="0.25s" usage="Screen transitions"/>
+    <transition name="slow" value="0.3s" usage="Panels slide, toggles, progress bars"/>
+    <transition name="panel" value="0.3s cubic-bezier(0.4, 0, 0.2, 1)" usage="Panel slide in/out"/>
+  </transitions>
+
+  <!-- ================================================================
+       LAYOUT DIMENSIONS
+       ================================================================ -->
+  <dimensions>
+    <dimension name="sidebar-width" value="240px"/>
+    <dimension name="panel-width" value="400px"/>
+    <dimension name="file-tree-width" value="200px"/>
+    <dimension name="context-panel-width" value="300px"/>
+    <dimension name="exec-progress-width" value="120px"/>
+    
+    <dimension name="avatar-sm" value="26px"/>
+    <dimension name="avatar-md" value="28px"/>
+    <dimension name="phase-icon" value="32px"/>
+    
+    <dimension name="toggle-width" value="32px"/>
+    <dimension name="toggle-height" value="18px"/>
+    <dimension name="toggle-dot" value="12px"/>
+    
+    <dimension name="dot-sm" value="6px"/>
+    <dimension name="dot-md" value="8px"/>
+    
+    <dimension name="progress-height-sm" value="3px"/>
+    <dimension name="progress-height-md" value="4px"/>
+    <dimension name="progress-height-lg" value="6px"/>
+    
+    <dimension name="orb-1" value="600px"/>
+    <dimension name="orb-2" value="500px"/>
+  </dimensions>
+
+  <!-- ================================================================
+       COMPONENT SPECIFICATIONS
+       ================================================================ -->
+  <components>
+    
+    <component name="Button">
+      <variants>
+        <variant name="primary">
+          <style>background: var(--gradient); color: #000; border: none;</style>
+          <hover>box-shadow: 0 0 20px rgba(249,115,22,0.4);</hover>
+        </variant>
+        <variant name="secondary">
+          <style>background: var(--surface-hover); color: var(--text); border: 1px solid var(--border);</style>
+        </variant>
+        <variant name="ghost">
+          <style>background: transparent; color: var(--text-muted);</style>
+          <hover>color: var(--text); background: var(--surface-hover);</hover>
+        </variant>
+        <variant name="success">
+          <style>background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.3);</style>
+        </variant>
+        <variant name="warning">
+          <style>background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3);</style>
+        </variant>
+        <variant name="error">
+          <style>background: rgba(239,68,68,0.15); color: var(--error); border: 1px solid rgba(239,68,68,0.3);</style>
+        </variant>
+      </variants>
+      <base-style>
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      </base-style>
+    </component>
+    
+    <component name="Card">
+      <style>
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        transition: all 0.2s;
+      </style>
+      <hover>border-color: var(--border-light);</hover>
+    </component>
+    
+    <component name="Badge">
+      <base-style>
+        font-size: 0.52rem;
+        padding: 2px 5px;
+        border-radius: 6px;
+        background: var(--surface-hover);
+        color: var(--text-muted);
+      </base-style>
+      <variants>
+        <variant name="warn">background: rgba(245,158,11,0.15); color: var(--warning);</variant>
+        <variant name="error">background: rgba(239,68,68,0.15); color: var(--error);</variant>
+        <variant name="success">background: rgba(34,197,94,0.15); color: var(--success);</variant>
+        <variant name="info">background: rgba(59,130,246,0.15); color: var(--info);</variant>
+        <variant name="live">background: var(--success); color: #000; animation: pulse 1.5s infinite;</variant>
+      </variants>
+    </component>
+    
+    <component name="NavItem">
+      <base-style>
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-bottom: 1px;
+        transition: all 0.15s;
+      </base-style>
+      <hover>color: var(--text); background: var(--surface-hover);</hover>
+      <active>color: var(--text); background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2);</active>
+    </component>
+    
+    <component name="TaskCard">
+      <base-style>
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+      </base-style>
+      <hover>border-color: var(--border-light); transform: translateX(4px);</hover>
+      <variants>
+        <variant name="running">border-left: 3px solid var(--success); background: rgba(34,197,94,0.02);</variant>
+        <variant name="queued">border-left: 3px solid var(--info);</variant>
+        <variant name="blocked">border-left: 3px solid var(--error); background: rgba(239,68,68,0.02);</variant>
+        <variant name="done">border-left: 3px solid var(--text-dim); opacity: 0.6;</variant>
+      </variants>
+    </component>
+    
+    <component name="PromptCard">
+      <style>
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      </style>
+      <header>
+        padding: 10px 14px;
+        background: rgba(167,139,250,0.1);
+        border-bottom: 1px solid var(--border);
+      </header>
+      <content>
+        padding: 12px 14px;
+        font-family: var(--font-code);
+        font-size: 0.72rem;
+        line-height: 1.6;
+      </content>
+    </component>
+    
+    <component name="ListItem">
+      <base-style>
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      </base-style>
+      <hover>transform: translateX(3px); border-color: var(--border-light);</hover>
+      <variants>
+        <variant name="warn">border-left: 3px solid var(--warning);</variant>
+        <variant name="success">border-left: 3px solid var(--success);</variant>
+        <variant name="error">border-left: 3px solid var(--error);</variant>
+      </variants>
+    </component>
+    
+    <component name="Panel">
+      <style>
+        width: 400px;
+        background: rgba(10,10,15,0.95);
+        backdrop-filter: blur(30px);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      </style>
+      <open>transform: translateX(0); box-shadow: -10px 0 40px rgba(0,0,0,0.5);</open>
+    </component>
+    
+    <component name="LiveOutput">
+      <container>
+        flex: 1;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      </container>
+      <line-variants>
+        <variant name="thinking">color: var(--text-dim); font-style: italic;</variant>
+        <variant name="action">color: var(--info);</variant>
+        <variant name="success">color: var(--success);</variant>
+        <variant name="error">color: var(--error);</variant>
+        <variant name="file">color: var(--purple);</variant>
+      </line-variants>
+      <cursor>
+        display: inline-block;
+        width: 8px;
+        height: 14px;
+        background: var(--primary);
+        animation: blink 1s infinite;
+        vertical-align: middle;
+        margin-left: 2px;
+      </cursor>
+    </component>
+    
+    <component name="ProgressBar">
+      <container>
+        height: var(--height);
+        background: var(--surface-active);
+        border-radius: 2px;
+        overflow: hidden;
+      </container>
+      <fill>
+        height: 100%;
+        background: var(--gradient);
+        border-radius: 2px;
+        transition: width 0.3s;
+      </fill>
+      <sizes>
+        <size name="sm" height="3px"/>
+        <size name="md" height="4px"/>
+        <size name="lg" height="6px"/>
+      </sizes>
+    </component>
+    
+    <component name="Toggle">
+      <container>width: 32px; height: 18px; position: relative;</container>
+      <slider>
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: var(--surface-active);
+        transition: 0.3s;
+        border-radius: 18px;
+      </slider>
+      <dot>
+        content: "";
+        position: absolute;
+        height: 12px;
+        width: 12px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      </dot>
+      <checked>
+        slider: background: var(--gradient);
+        dot: transform: translateX(14px);
+      </checked>
+    </component>
+    
+  </components>
+
+  <!-- ================================================================
+       QUICK ACTIONS BY SCREEN
+       ================================================================ -->
+  <quick-actions>
+    <screen name="Dashboard">
+      <action type="primary">✨ Continue execution</action>
+      <action type="success">▶️ Start all tasks</action>
+      <action type="warning">🔧 Fix blockers</action>
+      <action>📸 Create checkpoint</action>
+      <action>📊 View full plan</action>
+    </screen>
+    
+    <screen name="Execution">
+      <action type="primary">⏸ Pause execution</action>
+      <action type="success">✅ Approve current</action>
+      <action type="warning">⏭ Skip task</action>
+      <action>📋 View prompt</action>
+      <action>🔄 Restart task</action>
+    </screen>
+    
+    <screen name="Tasks">
+      <action type="primary">▶️ Execute all</action>
+      <action type="success">✅ Run next</action>
+      <action>🔄 Re-prioritize</action>
+      <action type="info">📊 Dependency graph</action>
+      <action>➕ Add task</action>
+    </screen>
+    
+    <screen name="Prompts">
+      <action type="primary">✨ Generate prompts from plan</action>
+      <action>✏️ Edit selected</action>
+      <action type="info">📤 Export all</action>
+      <action>🔄 Regenerate</action>
+    </screen>
+    
+    <screen name="Plan">
+      <action type="primary">✨ Generate tasks from plan</action>
+      <action type="success">▶️ Execute plan</action>
+      <action>✏️ Edit plan</action>
+      <action type="info">💾 Save checkpoint</action>
+    </screen>
+    
+    <screen name="Skills">
+      <action type="primary">➕ Add skill</action>
+      <action>📥 Import</action>
+      <action type="info">📖 Browse library</action>
+    </screen>
+    
+    <screen name="MCP">
+      <action type="primary">➕ Add MCP server</action>
+      <action>🔄 Restart all</action>
+      <action type="info">🧪 Test connections</action>
+    </screen>
+    
+    <screen name="Memory">
+      <action type="primary">➕ Add memory</action>
+      <action type="warning">🗑️ Clear</action>
+      <action type="info">🔍 Search</action>
+    </screen>
+    
+    <screen name="Code">
+      <action type="primary">✨ AI review</action>
+      <action type="success">▶️ Run dev server</action>
+      <action>🔧 Refactor</action>
+      <action type="warning">🐛 Find issues</action>
+    </screen>
+    
+    <screen name="Debug">
+      <action type="primary">✨ AI fix all</action>
+      <action type="success">🔧 Fix selected</action>
+      <action>📋 Copy trace</action>
+    </screen>
+    
+    <screen name="Tests">
+      <action type="primary">▶️ Run all</action>
+      <action type="success">✨ Generate missing</action>
+      <action type="warning">🔄 Re-run failed</action>
+    </screen>
+    
+    <screen name="Deploy">
+      <action type="primary">🚀 Deploy production</action>
+      <action type="success">🧪 Deploy staging</action>
+      <action type="warning">⏪ Rollback</action>
+    </screen>
+    
+    <screen name="Logs">
+      <action>⏸ Pause</action>
+      <action type="warning">⚠️ Errors only</action>
+      <action>🗑️ Clear</action>
+    </screen>
+    
+    <screen name="Connections">
+      <action type="primary">➕ Add connection</action>
+      <action type="success">🧪 Test all</action>
+    </screen>
+    
+    <screen name="Settings">
+      <action type="primary">💾 Save</action>
+      <action>🔄 Reset</action>
+    </screen>
+  </quick-actions>
+
+  <!-- ================================================================
+       CODE SYNTAX HIGHLIGHTING
+       ================================================================ -->
+  <syntax-highlighting>
+    <token name="keyword" class="kw" color="#c792ea" example="import, export, const, function"/>
+    <token name="function" class="fn" color="#82aaff" example="useQuery, useAccount"/>
+    <token name="string" class="str" color="#c3e88d" example="'@tanstack/react-query'"/>
+    <token name="type" class="type" color="#ffcb6b" example="Token, SUPPORTED_CHAINS"/>
+    <token name="comment" class="comment" color="#546e7a" example="// T-007: usePortfolio hook"/>
+  </syntax-highlighting>
+
+  <!-- ================================================================
+       XML PROMPT HIGHLIGHTING
+       ================================================================ -->
+  <prompt-highlighting>
+    <token name="tag" class="tag" color="var(--info)" example="&lt;task&gt;"/>
+    <token name="attribute" class="attr" color="var(--purple)" example="id="/>
+    <token name="value" class="val" color="var(--success)" example="&quot;T-007&quot;"/>
+    <token name="comment" class="comment" color="var(--text-dim)" example="&lt;!-- --&gt;"/>
+  </prompt-highlighting>
+
+</design-system>

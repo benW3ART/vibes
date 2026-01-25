@@ -1,0 +1,72 @@
+.live-output {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.live-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.live-output-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+
+.live-line {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.live-line-timestamp {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.live-line-content {
+  flex: 1;
+}
+
+.live-line.thinking {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.live-line.action {
+  color: var(--info);
+}
+
+.live-line.success {
+  color: var(--success);
+}
+
+.live-line.error {
+  color: var(--error);
+}
+
+.live-line.file {
+  color: var(--purple);
+}
+
+.live-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--primary);
+  animation: blink 1s infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}

@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<discovery 
+  project="vibes"
+  date="2025-01-24"
+  updated="2026-01-25"
+  interviewer="genius-interviewer"
+  status="validated"
+  version="2.0">
+  
+  <executive-summary>
+    vibes est un IDE Mac natif qui remplace l'expérience terminal de Claude Code par un cockpit 
+    visuel complet avec orchestration multi-agents. L'application visualise en temps réel le travail 
+    des agents Genius Team (Architect, Developer, QA, Deployer), leurs dépendances, et l'exécution 
+    des tâches avec leurs prompts XML générés.
+    
+    Chaque phase du développement possède son interface dédiée avec un chat contextuel. Le système 
+    expose la structure .claude/ (plan, skills, MCP, memory) et offre des modes d'exécution 
+    configurables (Plan/Ask/Auto + "Never Stop Until Done").
+    
+    L'objectif est de résoudre le problème de "knowledge vaporization" des vibe coders qui perdent 
+    le fil de leurs projets faute de visibilité sur ce que l'IA fait réellement.
+  </executive-summary>
+  
+  <vision>
+    <description>
+      IDE visuel complet pour vibe coders - un cockpit qui donne une visibilité totale sur 
+      l'orchestration multi-agents, les tâches en cours, les prompts générés, et le cycle 
+      complet de développement. Remplace l'expérience "boîte noire" du terminal Claude Code.
+    </description>
+    <tagline>Build what you feel ✨</tagline>
+    <motivation>
+      Le vibe coding explose mais les outils actuels (terminal Claude Code, Cursor) ne donnent pas 
+      assez de visibilité. Les développeurs ne voient pas ce que les agents font, ne comprennent 
+      pas les prompts générés, et perdent le contexte entre les sessions.
+    </motivation>
+    <success-criteria>
+      - Devenir l'outil de référence de la communauté vibe coding
+      - Construire une communauté active de contributeurs open source
+      - Permettre aux solo founders de mener des projets complexes sans perdre le fil
+      - Rendre visible et compréhensible le travail des agents IA
+    </success-criteria>
+    <core-philosophy>
+      Le cycle complet Avant-Code (conception) → Pendant-Code (développement) → Après-Code 
+      (tests, deploy, monitoring) n'est pas optionnel. vibes guide et structure ce cycle 
+      en exposant le travail des agents à chaque étape.
+    </core-philosophy>
+  </vision>
+  
+  <users>
+    <primary-user>
+      <type>Solo Founder / Entrepreneur utilisant Genius Team</type>
+      <context>
+        Personne avec des idées qui utilise Claude Code et la méthodologie Genius Team 
+        pour développer des projets. Veut comprendre ce que les agents font, voir les 
+        prompts générés, et contrôler l'exécution.
+      </context>
+      <current-solution>
+        - Claude Code en terminal (CLI) - aucune visibilité sur les agents
+        - Logs textuels difficiles à parser
+        - Fichiers .claude/ à explorer manuellement
+      </current-solution>
+      <pain-points>
+        <pain>Aucune visibilité sur ce que les agents font en temps réel</pain>
+        <pain>Impossible de voir les prompts générés par l'Architect</pain>
+        <pain>Pas de vue sur les dépendances entre tâches</pain>
+        <pain>Difficile de comprendre pourquoi une tâche est bloquée</pain>
+        <pain>Les fichiers .claude/ sont opaques</pain>
+        <pain>Pas de contrôle fin sur l'exécution (pause, skip, mode)</pain>
+        <pain>Perte de contexte entre les sessions</pain>
+      </pain-points>
+    </primary-user>
+    <secondary-users>
+      <user>Développeurs qui veulent visualiser le workflow Genius Team</user>
+      <user>Créateurs de skills qui veulent debugger leurs agents</user>
+    </secondary-users>
+  </users>
+  
+  <problem>
+    <core-problem>
+      Claude Code + Genius Team est puissant mais c'est une boîte noire. Les utilisateurs 
+      ne voient pas le travail des agents, les prompts générés, les dépendances entre tâches, 
+      ni l'état réel de l'exécution. Tout se passe dans un terminal avec des logs textuels.
+    </core-problem>
+    <impact>
+      - Impossible de debugger quand quelque chose ne marche pas
+      - Frustration de ne pas comprendre pourquoi une tâche est bloquée
+      - Difficulté à reprendre un projet après une pause
+      - Pas de confiance dans le processus car tout est opaque
+    </impact>
+    <why-now>
+      - Genius Team devient mature avec des agents spécialisés
+      - Claude Code v2+ est stable et largement adopté
+      - Besoin croissant de visualisation pour projets complexes
+      - Aucun outil ne propose cette visibilité actuellement
+    </why-now>
+  </problem>
+  
+  <solution>
+    <concept>
+      IDE Mac natif avec architecture de "cockpit multi-agents" comprenant :
+      - Agent Activity Bar temps réel avec statuts et dépendances
+      - Execution Bar montrant la tâche en cours avec progress
+      - Écrans dédiés : Execution (live output), Tasks (liste), Prompts (XML générés)
+      - Exposition complète de .claude/ (plan, skills, MCP, settings, memory)
+      - Modes d'exécution configurables (Plan/Ask/Auto + Never Stop)
+      - Chat contextuel sur chaque écran
+    </concept>
+    
+    <key-screens>
+      <screen-group name="Command">
+        <screen name="Dashboard">Vue d'ensemble avec progress, agents actifs, phases</screen>
+        <screen name="Execution">Live output temps réel, file changes, task queue</screen>
+        <screen name="Tasks">Liste complète des tâches avec statuts et dépendances</screen>
+        <screen name="Prompts">Tous les prompts XML générés par l'Architect</screen>
+      </screen-group>
+      
+      <screen-group name=".claude">
+        <screen name="Plan">Visualisation de .claude/plan.md avec progress par phase</screen>
+        <screen name="Skills">Liste des skills installés dans .claude/skills/</screen>
+        <screen name="MCP">Serveurs MCP configurés dans .claude/mcp.json</screen>
+        <screen name="Settings">Configuration .claude/settings.json</screen>
+        <screen name="Memory">Mémoire projet dans .claude/memory/</screen>
+      </screen-group>
+      
+      <screen-group name="Build">
+        <screen name="Code">IDE avec context panel montrant la tâche en cours</screen>
+        <screen name="Debug">Erreurs avec analyse et fix suggérés</screen>
+        <screen name="Tests">Tests avec coverage et résultats</screen>
+      </screen-group>
+      
+      <screen-group name="Ship">
+        <screen name="Deploy">Déploiement staging/production</screen>
+        <screen name="Logs">Logs temps réel</screen>
+        <screen name="Analytics">Métriques d'usage</screen>
+      </screen-group>
+      
+      <screen-group name="System">
+        <screen name="Connections">APIs et services connectés</screen>
+        <screen name="Environment">Variables d'environnement</screen>
+      </screen-group>
+    </key-screens>
+    
+    <key-components>
+      <component name="Agent Activity Bar">
+        Bandeau montrant les 4 agents (Architect, Developer, QA, Deployer) avec :
+        - Statut temps réel (Running, Waiting, Blocked)
+        - Tâche en cours et progress %
+        - Dépendances visibles
+        - Boutons Pause/Resume
+      </component>
+      
+      <component name="Execution Bar">
+        Bandeau permanent montrant :
+        - Tâche en cours (ID + nom)
+        - Agent actif
+        - Fichier en cours d'écriture
+        - Progress bar avec estimation temps
+        - Boutons Pause/Skip/Watch
+      </component>
+      
+      <component name="Mode Selector">
+        Dans la sidebar :
+        - Plan Mode : planifie sans exécuter
+        - Ask Mode : demande confirmation avant chaque edit (défaut)
+        - Auto Mode : exécute automatiquement
+        - Toggle "Never Stop Until Done"
+      </component>
+      
+      <component name="Live Output">
+        Terminal stylisé montrant en temps réel :
+        - 🤔 Thinking...
+        - 📂 Reading files...
+        - ✓ Success
+        - 📝 Writing code...
+        - Cursor clignotant animé
+      </component>
+      
+      <component name="Context Panel">
+        Panneau latéral dans l'écran Code montrant :
+        - Tâche en cours avec requirements checklist
+        - Fichiers liés
+        - ADR applicable
+        - Dépendances
+      </component>
+      
+      <component name="Quick Actions">
+        Actions contextuelles sur chaque écran :
+        - Dashboard : Continue, Fix blockers, Create checkpoint
+        - Execution : Pause, Approve, Skip, View prompt
+        - Tasks : Execute all, Run next, Re-prioritize
+        - Code : AI review, Run server, Refactor
+        - etc.
+      </component>
+      
+      <component name="Chat Panel">
+        Panel latéral (⌘J) avec :
+        - Chat Claude contextuel à l'écran actif
+        - Affiche l'agent/tâche en cours
+        - Quick actions intégrées
+      </component>
+      
+      <component name="X-Ray Panel">
+        Panel latéral (⌘I) montrant :
+        - Tâche en cours détaillée
+        - Fichier en cours d'écriture
+        - Prompt utilisé
+        - Dépendances
+        - Quick actions
+      </component>
+    </key-components>
+  </solution>
+  
+  <constraints>
+    <technical>
+      <constraint>Mac natif (pas de version Windows/Linux pour v1)</constraint>
+      <constraint>Intégration Claude Code CLI</constraint>
+      <constraint>Lecture de la structure .claude/</constraint>
+      <constraint>Support des skills Genius Team</constraint>
+    </technical>
+    <timeline>
+      <target>MVP fonctionnel ASAP</target>
+      <approach>Maquette HTML d'abord pour validation, puis développement</approach>
+    </timeline>
+    <budget>
+      <type>Open source, pas de monétisation directe</type>
+    </budget>
+  </constraints>
+  
+  <brand-identity>
+    <name>vibes</name>
+    <tagline>Build what you feel ✨</tagline>
+    <visual-style>
+      <element>Glassmorphism premium avec blur et transparence</element>
+      <element>Dark mode natif</element>
+      <element>Gradient orange → pink pour les accents</element>
+      <element>Animations fluides et satisfaisantes</element>
+      <element>Statuts colorés : vert (success), orange (warning), rouge (error), bleu (info)</element>
+    </visual-style>
+    <navigation-structure>
+      <section name="Command">Dashboard, Execution, Tasks, Prompts</section>
+      <section name=".claude">Plan, Skills, MCP, Settings, Memory</section>
+      <section name="Build">Code, Debug, Tests</section>
+      <section name="Ship">Deploy, Logs, Analytics</section>
+      <section name="System">Connections, Environment</section>
+    </navigation-structure>
+  </brand-identity>
+  
+  <business-model>
+    <type>Open Source</type>
+    <sustainability>
+      Ben utilise vibes pour créer des projets rémunérateurs.
+      Les revenus générés financent le temps pour faire évoluer l'outil.
+    </sustainability>
+    <distribution>
+      <channel>GitHub</channel>
+      <channel>Communautés dev (Twitter/X, Discord)</channel>
+      <channel>Product Hunt launch</channel>
+    </distribution>
+  </business-model>
+  
+  <validation-status>
+    <phase name="Maquette HTML" status="complete">
+      Maquette v8 complète avec tous les écrans et interactions.
+    </phase>
+    <phase name="Specs" status="in-progress">
+      DISCOVERY.xml et SPECIFICATIONS.xml à finaliser.
+    </phase>
+    <phase name="Architecture" status="pending">
+      genius-architect à lancer après specs.
+    </phase>
+  </validation-status>
+  
+</discovery>
+DISCOVERY'
+echo "DISCOVERY v2: $(wc -l < /home/claude/vibes-DISCOVERY-v2.xml) lines"

@@ -1,0 +1,69 @@
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-active) 25%,
+    var(--surface-hover) 50%,
+    var(--surface-active) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.text {
+  height: 16px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.card {
+  height: 120px;
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.circle {
+  border-radius: 50%;
+}
+
+.skeletonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonCard {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.skeletonCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.skeletonCardHeaderText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

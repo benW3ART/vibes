@@ -1,0 +1,166 @@
+.tooltip {
+  position: fixed;
+  z-index: 10001;
+  width: 360px;
+  padding: 20px;
+  background: #0a0a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tooltip.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #0a0a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+.arrow.top {
+  top: -7px;
+  left: 50%;
+  margin-left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.arrow.bottom {
+  bottom: -7px;
+  left: 50%;
+  margin-left: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+.arrow.left {
+  left: -7px;
+  top: 50%;
+  margin-top: -6px;
+  border-right: none;
+  border-top: none;
+}
+
+.arrow.right {
+  right: -7px;
+  top: 50%;
+  margin-top: -6px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stepCounter {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f97316;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.skipButton {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.skipButton:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 8px;
+}
+
+.description {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 20px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.prevButton {
+  flex: 1;
+  padding: 10px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.prevButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nextButton {
+  flex: 1;
+  padding: 10px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #050508;
+  background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nextButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.3s ease;
+}
+
+.dot.active {
+  background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+}

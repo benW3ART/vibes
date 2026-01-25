@@ -1,0 +1,43 @@
+.exec-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.exec-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exec-bar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exec-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exec-progress {
+  width: 120px;
+}
+
+.exec-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.exec-task-icon {
+  font-size: 1rem;
+}

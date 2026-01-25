@@ -1,0 +1,53 @@
+{
+  "version": "6.2.0",
+  "project": {
+    "name": "vibes",
+    "created_at": "2026-01-25T10:00:00Z",
+    "updated_at": "2026-01-25T10:00:00Z"
+  },
+  "phase": "EXECUTION",
+  "current_skill": "genius-orchestrator",
+  "skill_history": [
+    "genius-interviewer",
+    "genius-specs",
+    "genius-designer",
+    "genius-architect"
+  ],
+  "checkpoints": {
+    "discovery_complete": true,
+    "market_analysis_complete": true,
+    "specs_approved": true,
+    "design_chosen": true,
+    "architecture_approved": true,
+    "execution_started": true,
+    "execution_complete": true,
+    "qa_passed": true,
+    "deployed": false
+  },
+  "tasks": {
+    "total": 151,
+    "completed": 151,
+    "failed": 0,
+    "skipped": 0,
+    "current_task_id": null
+  },
+  "artifacts": {
+    "DISCOVERY.xml": true,
+    "MARKET-ANALYSIS.xml": false,
+    "BUSINESS-MODEL.xml": false,
+    "SPECIFICATIONS.xml": true,
+    "DESIGN-SYSTEM.html": false,
+    "DESIGN-SYSTEM.xml": true,
+    "design-config.json": false,
+    "MARKETING-STRATEGY.xml": false,
+    "ARCHITECTURE.md": true,
+    ".claude/plan.md": true
+  },
+  "git": {
+    "enabled": false,
+    "last_checkpoint": null,
+    "checkpoints": []
+  },
+  "errors": [],
+  "warnings": []
+}

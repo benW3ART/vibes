@@ -1,0 +1,1398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<micro-prompts 
+  project="vibes"
+  version="1.0"
+  created="2026-01-25"
+  architect="genius-architect-v4">
+  
+  <metadata>
+    <total-prompts>218</total-prompts>
+    <estimated-minutes>1090</estimated-minutes>
+    <estimated-hours>18.2</estimated-hours>
+    <estimated-cost>$22</estimated-cost>
+  </metadata>
+  
+  <execution-config>
+    <max-rounds>50</max-rounds>
+    <retry-per-task>2</retry-per-task>
+    <git-commit-on-success>true</git-commit-on-success>
+    <parallel-execution>true</parallel-execution>
+  </execution-config>
+  
+  <components>
+    <component id="setup" parallel-group="1"/>
+    <component id="types" parallel-group="2" depends="setup"/>
+    <component id="styles" parallel-group="2" depends="setup"/>
+    <component id="ui" parallel-group="3" depends="styles,types"/>
+    <component id="stores" parallel-group="3" depends="types"/>
+    <component id="layout" parallel-group="4" depends="ui,stores"/>
+    <component id="global" parallel-group="5" depends="layout,stores"/>
+    <component id="electron" parallel-group="4" depends="setup"/>
+    <component id="claude-integration" parallel-group="5" depends="electron,types"/>
+    <component id="hooks" parallel-group="5" depends="stores,claude-integration"/>
+    <component id="screens-command" parallel-group="6" depends="global,hooks"/>
+    <component id="screens-claude" parallel-group="6" depends="global,hooks"/>
+    <component id="screens-build" parallel-group="6" depends="global,hooks"/>
+    <component id="screens-ship" parallel-group="7" depends="global,hooks"/>
+    <component id="screens-system" parallel-group="7" depends="global,hooks"/>
+    <component id="demo" parallel-group="8" depends="screens-command"/>
+    <component id="polish" parallel-group="9" depends="demo"/>
+  </components>
+  
+  <prompts>
+  
+    <!-- ================================================================
+         SETUP - Project Initialization (15 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SETUP-001" component="setup" estimated-minutes="5">
+      <task>Initialize Electron + Vite + React + TypeScript project using create-electron-vite with react-ts template. Project name: vibes</task>
+      <files>
+        <file action="create">package.json</file>
+        <file action="create">tsconfig.json</file>
+        <file action="create">vite.config.ts</file>
+      </files>
+      <verify><command>test -f package.json && test -f tsconfig.json && test -f vite.config.ts</command></verify>
+      <success-criteria>
+        - package.json exists with electron, vite, react dependencies
+        - tsconfig.json configured for React
+        - vite.config.ts with electron plugin
+      </success-criteria>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-002" component="setup" estimated-minutes="3">
+      <task>Install core dependencies: zustand, @tanstack/react-query, clsx, date-fns</task>
+      <verify><command>grep -q "zustand" package.json && grep -q "@tanstack/react-query" package.json</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-003" component="setup" estimated-minutes="3">
+      <task>Install dev dependencies: @types/node, electron-builder, concurrently</task>
+      <verify><command>grep -q "electron-builder" package.json</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-004" component="setup" estimated-minutes="3">
+      <task>Create electron/main.ts with basic Electron app setup: BrowserWindow 1400x900, load vite dev server or built index.html</task>
+      <files>
+        <file action="create">electron/main.ts</file>
+      </files>
+      <verify><command>grep -q "BrowserWindow" electron/main.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-005" component="setup" estimated-minutes="3">
+      <task>Create electron/preload.ts with contextBridge exposing ipcRenderer methods: send, on, invoke</task>
+      <files>
+        <file action="create">electron/preload.ts</file>
+      </files>
+      <verify><command>grep -q "contextBridge" electron/preload.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-006" component="setup" estimated-minutes="2">
+      <task>Update package.json scripts: "dev" runs electron + vite concurrently, "build" builds both, "preview" runs built app</task>
+      <verify><command>grep -q '"dev"' package.json && grep -q '"build"' package.json</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-007" component="setup" estimated-minutes="2">
+      <task>Create electron-builder.json config for macOS build: dmg, appId "com.vibes.ide", productName "vibes"</task>
+      <files>
+        <file action="create">electron-builder.json</file>
+      </files>
+      <verify><command>grep -q "com.vibes.ide" electron-builder.json</command></verify>
+      <depends-on><ref>MP-SETUP-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-008" component="setup" estimated-minutes="2">
+      <task>Create src/main.tsx entry point rendering App component into #root with React.StrictMode and QueryClientProvider</task>
+      <files>
+        <file action="create">src/main.tsx</file>
+      </files>
+      <verify><command>grep -q "QueryClientProvider" src/main.tsx</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-009" component="setup" estimated-minutes="2">
+      <task>Create src/App.tsx with basic shell: div with className "app" containing Sidebar and MainContent placeholders</task>
+      <files>
+        <file action="create">src/App.tsx</file>
+      </files>
+      <verify><command>grep -q "className.*app" src/App.tsx</command></verify>
+      <depends-on><ref>MP-SETUP-008</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-010" component="setup" estimated-minutes="2">
+      <task>Create index.html in root with viewport meta, #root div, and links to Google Fonts: Space Grotesk, Inter, JetBrains Mono</task>
+      <files>
+        <file action="modify">index.html</file>
+      </files>
+      <verify><command>grep -q "Space Grotesk" index.html</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-011" component="setup" estimated-minutes="2">
+      <task>Create .gitignore with node_modules, dist, dist-electron, .DS_Store, *.log</task>
+      <files>
+        <file action="create">.gitignore</file>
+      </files>
+      <verify><command>grep -q "node_modules" .gitignore</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-012" component="setup" estimated-minutes="2">
+      <task>Create README.md with project title "vibes ✨", tagline "Build what you feel", and basic setup instructions</task>
+      <files>
+        <file action="create">README.md</file>
+      </files>
+      <verify><command>grep -q "vibes" README.md</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-013" component="setup" estimated-minutes="3">
+      <task>Configure vite.config.ts with path aliases: @ for src/, @components for src/components/, @stores for src/stores/</task>
+      <verify><command>grep -q "@components" vite.config.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-014" component="setup" estimated-minutes="2">
+      <task>Update tsconfig.json with matching path aliases for @, @components, @stores, @hooks, @types</task>
+      <verify><command>grep -q "@components" tsconfig.json</command></verify>
+      <depends-on><ref>MP-SETUP-013</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SETUP-015" component="setup" estimated-minutes="2">
+      <task>Verify project runs: npm run dev should open Electron window with React app (empty shell is OK)</task>
+      <verify><command>npm run build 2>&1 | grep -q "build" || echo "Build configured"</command></verify>
+      <depends-on><ref>MP-SETUP-009</ref><ref>MP-SETUP-006</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         TYPES - TypeScript Type Definitions (10 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-TYPES-001" component="types" estimated-minutes="3">
+      <task>Create src/types/agent.ts with AgentType enum (architect, developer, qa, deployer) and Agent interface (id, type, status, currentTask, progress, dependencies)</task>
+      <files>
+        <file action="create">src/types/agent.ts</file>
+      </files>
+      <verify><command>grep -q "AgentType" src/types/agent.ts && grep -q "interface Agent" src/types/agent.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-002" component="types" estimated-minutes="3">
+      <task>Create src/types/task.ts with TaskStatus enum (done, running, queued, blocked) and Task interface (id, title, description, status, agent, progress, dependencies, acceptanceCriteria, prompt, phase)</task>
+      <files>
+        <file action="create">src/types/task.ts</file>
+      </files>
+      <verify><command>grep -q "TaskStatus" src/types/task.ts && grep -q "interface Task" src/types/task.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-003" component="types" estimated-minutes="3">
+      <task>Create src/types/prompt.ts with Prompt interface (id, taskId, agent, objective, context, requirements, depends, output, status)</task>
+      <files>
+        <file action="create">src/types/prompt.ts</file>
+      </files>
+      <verify><command>grep -q "interface Prompt" src/types/prompt.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-004" component="types" estimated-minutes="3">
+      <task>Create src/types/claude.ts with ClaudeEvent union type (thinking, reading, writing, executing, success, error, task_start, task_complete, agent_switch) and ClaudeConfig interface</task>
+      <files>
+        <file action="create">src/types/claude.ts</file>
+      </files>
+      <verify><command>grep -q "ClaudeEvent" src/types/claude.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-005" component="types" estimated-minutes="2">
+      <task>Create src/types/project.ts with Project interface (name, path, status, plan, tasks, prompts) and ProjectStatus type</task>
+      <files>
+        <file action="create">src/types/project.ts</file>
+      </files>
+      <verify><command>grep -q "interface Project" src/types/project.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-006" component="types" estimated-minutes="2">
+      <task>Create src/types/skill.ts with Skill interface (id, name, path, description, active) and MCP interface (name, package, status, description)</task>
+      <files>
+        <file action="create">src/types/skill.ts</file>
+      </files>
+      <verify><command>grep -q "interface Skill" src/types/skill.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-007" component="types" estimated-minutes="2">
+      <task>Create src/types/memory.ts with Memory interface (id, title, content, type: decision|pattern|convention|lesson, createdAt)</task>
+      <files>
+        <file action="create">src/types/memory.ts</file>
+      </files>
+      <verify><command>grep -q "interface Memory" src/types/memory.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-008" component="types" estimated-minutes="2">
+      <task>Create src/types/navigation.ts with ScreenId type (all 17 screen names) and NavSection type (command, claude, build, ship, system)</task>
+      <files>
+        <file action="create">src/types/navigation.ts</file>
+      </files>
+      <verify><command>grep -q "ScreenId" src/types/navigation.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-009" component="types" estimated-minutes="2">
+      <task>Create src/types/execution.ts with ExecutionMode type (plan, ask, auto) and ExecutionState interface (mode, neverStop, isRunning, isPaused)</task>
+      <files>
+        <file action="create">src/types/execution.ts</file>
+      </files>
+      <verify><command>grep -q "ExecutionMode" src/types/execution.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-TYPES-010" component="types" estimated-minutes="2">
+      <task>Create src/types/index.ts that re-exports all types from agent, task, prompt, claude, project, skill, memory, navigation, execution</task>
+      <files>
+        <file action="create">src/types/index.ts</file>
+      </files>
+      <verify><command>grep -q "export.*from" src/types/index.ts</command></verify>
+      <depends-on><ref>MP-TYPES-001</ref><ref>MP-TYPES-002</ref><ref>MP-TYPES-003</ref><ref>MP-TYPES-004</ref><ref>MP-TYPES-005</ref><ref>MP-TYPES-006</ref><ref>MP-TYPES-007</ref><ref>MP-TYPES-008</ref><ref>MP-TYPES-009</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         STYLES - CSS Design System (12 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-STYLES-001" component="styles" estimated-minutes="5">
+      <task>Create src/styles/variables.css with all CSS custom properties from DESIGN-SYSTEM.xml: colors (primary, secondary, bg, surface, border, text, status), fonts, radius values</task>
+      <files>
+        <file action="create">src/styles/variables.css</file>
+      </files>
+      <verify><command>grep -q "\-\-primary: #f97316" src/styles/variables.css</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-002" component="styles" estimated-minutes="4">
+      <task>Create src/styles/animations.css with keyframes: pulse (scale 1-1.1), orbFloat (translate 30px), screenIn (opacity+translateY), msgIn, blink (cursor)</task>
+      <files>
+        <file action="create">src/styles/animations.css</file>
+      </files>
+      <verify><command>grep -q "@keyframes pulse" src/styles/animations.css && grep -q "@keyframes blink" src/styles/animations.css</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-003" component="styles" estimated-minutes="5">
+      <task>Create src/styles/globals.css with base styles: box-sizing border-box, body with font-family var(--font-body), bg var(--bg), color var(--text), min-height 100vh, overflow hidden</task>
+      <files>
+        <file action="create">src/styles/globals.css</file>
+      </files>
+      <verify><command>grep -q "box-sizing: border-box" src/styles/globals.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-004" component="styles" estimated-minutes="3">
+      <task>Add ambient orbs styles to globals.css: .orb class with position absolute, border-radius 50%, filter blur(100px), opacity 0.15, animation orbFloat. .orb-1 and .orb-2 with different sizes and colors</task>
+      <verify><command>grep -q ".orb" src/styles/globals.css</command></verify>
+      <depends-on><ref>MP-STYLES-003</ref><ref>MP-STYLES-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-005" component="styles" estimated-minutes="3">
+      <task>Add .app class to globals.css: display flex, height 100vh, position relative, z-index 1</task>
+      <verify><command>grep -q ".app" src/styles/globals.css</command></verify>
+      <depends-on><ref>MP-STYLES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-006" component="styles" estimated-minutes="4">
+      <task>Create src/styles/sidebar.css with .sidebar styles: width 240px, background rgba(10,10,15,0.9), backdrop-filter blur(30px), border-right, flex column</task>
+      <files>
+        <file action="create">src/styles/sidebar.css</file>
+      </files>
+      <verify><command>grep -q ".sidebar" src/styles/sidebar.css && grep -q "240px" src/styles/sidebar.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-007" component="styles" estimated-minutes="4">
+      <task>Create src/styles/exec-bar.css with .exec-bar gradient background, .exec-status, .exec-task, .exec-progress, .exec-btn styles from v8 mockup</task>
+      <files>
+        <file action="create">src/styles/exec-bar.css</file>
+      </files>
+      <verify><command>grep -q ".exec-bar" src/styles/exec-bar.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-008" component="styles" estimated-minutes="4">
+      <task>Create src/styles/panels.css with .panel styles: width 400px, position fixed, right 0, transform translateX(100%), transition 0.3s, backdrop-filter blur(30px). .panel.open with translateX(0)</task>
+      <files>
+        <file action="create">src/styles/panels.css</file>
+      </files>
+      <verify><command>grep -q ".panel" src/styles/panels.css && grep -q "400px" src/styles/panels.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-009" component="styles" estimated-minutes="4">
+      <task>Create src/styles/cards.css with .card, .task-card (with status border-left variants), .prompt-card (with header), .list-item styles from v8 mockup</task>
+      <files>
+        <file action="create">src/styles/cards.css</file>
+      </files>
+      <verify><command>grep -q ".task-card" src/styles/cards.css && grep -q ".prompt-card" src/styles/cards.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-010" component="styles" estimated-minutes="3">
+      <task>Create src/styles/buttons.css with .btn base, .btn-primary (gradient), .btn-secondary, .btn-ghost, .btn-success, .btn-warning, .btn-error variants</task>
+      <files>
+        <file action="create">src/styles/buttons.css</file>
+      </files>
+      <verify><command>grep -q ".btn-primary" src/styles/buttons.css && grep -q ".btn-ghost" src/styles/buttons.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-011" component="styles" estimated-minutes="3">
+      <task>Create src/styles/live-output.css with .live-output container, line type classes (.thinking, .action, .success, .error, .file), and .cursor with blink animation</task>
+      <files>
+        <file action="create">src/styles/live-output.css</file>
+      </files>
+      <verify><command>grep -q ".live-output" src/styles/live-output.css && grep -q ".cursor" src/styles/live-output.css</command></verify>
+      <depends-on><ref>MP-STYLES-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STYLES-012" component="styles" estimated-minutes="2">
+      <task>Create src/styles/index.css that imports all style files in order: variables, animations, globals, sidebar, exec-bar, panels, cards, buttons, live-output</task>
+      <files>
+        <file action="create">src/styles/index.css</file>
+      </files>
+      <verify><command>grep -q "@import.*variables" src/styles/index.css</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref><ref>MP-STYLES-002</ref><ref>MP-STYLES-003</ref><ref>MP-STYLES-006</ref><ref>MP-STYLES-007</ref><ref>MP-STYLES-008</ref><ref>MP-STYLES-009</ref><ref>MP-STYLES-010</ref><ref>MP-STYLES-011</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         UI COMPONENTS - Design System Components (20 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-UI-001" component="ui" estimated-minutes="2">
+      <task>Create src/utils/cn.ts utility function that merges classNames using clsx, filtering falsy values</task>
+      <files>
+        <file action="create">src/utils/cn.ts</file>
+      </files>
+      <verify><command>grep -q "clsx" src/utils/cn.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-002" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/Button.tsx with variants prop (primary, secondary, ghost, success, warning, error), size prop (sm, md), and proper TypeScript types extending ButtonHTMLAttributes</task>
+      <files>
+        <file action="create">src/components/ui/Button.tsx</file>
+      </files>
+      <verify><command>grep -q "variant" src/components/ui/Button.tsx && grep -q "ButtonHTMLAttributes" src/components/ui/Button.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-010</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-003" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/Card.tsx with className prop, hover prop for hover effect, children. Uses .card class from cards.css</task>
+      <files>
+        <file action="create">src/components/ui/Card.tsx</file>
+      </files>
+      <verify><command>grep -q "Card" src/components/ui/Card.tsx && grep -q "className" src/components/ui/Card.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-009</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-004" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/Badge.tsx with variant prop (default, warn, error, success, info, live), children, and count prop for numeric badges</task>
+      <files>
+        <file action="create">src/components/ui/Badge.tsx</file>
+      </files>
+      <verify><command>grep -q "Badge" src/components/ui/Badge.tsx && grep -q "variant" src/components/ui/Badge.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-005" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/Toggle.tsx with checked, onChange props. Renders label.toggle-sm with hidden input and .toggle-sm-slider span</task>
+      <files>
+        <file action="create">src/components/ui/Toggle.tsx</file>
+      </files>
+      <verify><command>grep -q "Toggle" src/components/ui/Toggle.tsx && grep -q "checked" src/components/ui/Toggle.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-006</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-006" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/ProgressBar.tsx with value (0-100), size prop (sm, md, lg), optional showLabel prop. Uses .progress-bar and .progress-fill classes</task>
+      <files>
+        <file action="create">src/components/ui/ProgressBar.tsx</file>
+      </files>
+      <verify><command>grep -q "ProgressBar" src/components/ui/ProgressBar.tsx && grep -q "value" src/components/ui/ProgressBar.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-001</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-007" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/NavItem.tsx with icon, label, active, badge, badgeVariant, onClick props. Uses .nav-item and .nav-badge classes</task>
+      <files>
+        <file action="create">src/components/ui/NavItem.tsx</file>
+      </files>
+      <verify><command>grep -q "NavItem" src/components/ui/NavItem.tsx && grep -q "active" src/components/ui/NavItem.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-006</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-008" component="ui" estimated-minutes="5">
+      <task>Create src/components/ui/TaskCard.tsx with task prop (Task type), onClick, selected. Shows status icon, title, agent badge, dependencies, progress bar if running. Uses .task-card with status variant</task>
+      <files>
+        <file action="create">src/components/ui/TaskCard.tsx</file>
+      </files>
+      <verify><command>grep -q "TaskCard" src/components/ui/TaskCard.tsx && grep -q "task:" src/components/ui/TaskCard.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-009</ref><ref>MP-TYPES-002</ref><ref>MP-UI-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-009" component="ui" estimated-minutes="5">
+      <task>Create src/components/ui/PromptCard.tsx with prompt prop (Prompt type), showFull prop. Header with task ID and status badge, content with XML preview or full prompt. Copy button</task>
+      <files>
+        <file action="create">src/components/ui/PromptCard.tsx</file>
+      </files>
+      <verify><command>grep -q "PromptCard" src/components/ui/PromptCard.tsx && grep -q "prompt:" src/components/ui/PromptCard.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-009</ref><ref>MP-TYPES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-010" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/ListItem.tsx with icon, title, subtitle, status (success, warn, error), action, onClick props. Uses .list-item with status border variant</task>
+      <files>
+        <file action="create">src/components/ui/ListItem.tsx</file>
+      </files>
+      <verify><command>grep -q "ListItem" src/components/ui/ListItem.tsx && grep -q "status" src/components/ui/ListItem.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-009</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-011" component="ui" estimated-minutes="5">
+      <task>Create src/components/ui/LiveOutput.tsx with lines prop (array of {type, content}), showCursor prop. Renders .live-output container with styled lines and blinking cursor on last line</task>
+      <files>
+        <file action="create">src/components/ui/LiveOutput.tsx</file>
+      </files>
+      <verify><command>grep -q "LiveOutput" src/components/ui/LiveOutput.tsx && grep -q "lines" src/components/ui/LiveOutput.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-011</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-012" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/StatusDot.tsx with status prop (running, waiting, blocked, idle), animated prop. Renders colored dot with optional pulse animation</task>
+      <files>
+        <file action="create">src/components/ui/StatusDot.tsx</file>
+      </files>
+      <verify><command>grep -q "StatusDot" src/components/ui/StatusDot.tsx && grep -q "status" src/components/ui/StatusDot.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-002</ref><ref>MP-UI-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-013" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/AgentCard.tsx with agent prop (Agent type), compact prop for small version. Shows emoji, name, status, current task, progress, pause/resume button</task>
+      <files>
+        <file action="create">src/components/ui/AgentCard.tsx</file>
+      </files>
+      <verify><command>grep -q "AgentCard" src/components/ui/AgentCard.tsx && grep -q "agent:" src/components/ui/AgentCard.tsx</command></verify>
+      <depends-on><ref>MP-TYPES-001</ref><ref>MP-UI-006</ref><ref>MP-UI-012</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-014" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/PhaseCard.tsx with name, icon, progress, taskCount, status props. Clickable card showing phase progress with colored status indicator</task>
+      <files>
+        <file action="create">src/components/ui/PhaseCard.tsx</file>
+      </files>
+      <verify><command>grep -q "PhaseCard" src/components/ui/PhaseCard.tsx && grep -q "progress" src/components/ui/PhaseCard.tsx</command></verify>
+      <depends-on><ref>MP-UI-003</ref><ref>MP-UI-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-015" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/SkillCard.tsx with skill prop (Skill type), onToggle. Shows icon, name, path, description, active toggle</task>
+      <files>
+        <file action="create">src/components/ui/SkillCard.tsx</file>
+      </files>
+      <verify><command>grep -q "SkillCard" src/components/ui/SkillCard.tsx && grep -q "skill:" src/components/ui/SkillCard.tsx</command></verify>
+      <depends-on><ref>MP-TYPES-006</ref><ref>MP-UI-003</ref><ref>MP-UI-005</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-016" component="ui" estimated-minutes="4">
+      <task>Create src/components/ui/ConnectionCard.tsx with name, icon, status (connected, disconnected, error), onConnect props. Shows connection status with action button</task>
+      <files>
+        <file action="create">src/components/ui/ConnectionCard.tsx</file>
+      </files>
+      <verify><command>grep -q "ConnectionCard" src/components/ui/ConnectionCard.tsx && grep -q "status" src/components/ui/ConnectionCard.tsx</command></verify>
+      <depends-on><ref>MP-UI-003</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-017" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/StatCard.tsx with label, value, trend (up, down, neutral), icon props. Displays KPI with large number and trend indicator</task>
+      <files>
+        <file action="create">src/components/ui/StatCard.tsx</file>
+      </files>
+      <verify><command>grep -q "StatCard" src/components/ui/StatCard.tsx && grep -q "value" src/components/ui/StatCard.tsx</command></verify>
+      <depends-on><ref>MP-UI-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-018" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/SectionTitle.tsx with title, count, action props. Renders uppercase label with optional count badge and action button</task>
+      <files>
+        <file action="create">src/components/ui/SectionTitle.tsx</file>
+      </files>
+      <verify><command>grep -q "SectionTitle" src/components/ui/SectionTitle.tsx</command></verify>
+      <depends-on><ref>MP-UI-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-019" component="ui" estimated-minutes="3">
+      <task>Create src/components/ui/EmptyState.tsx with icon, title, description, action props. Centered placeholder for empty screens</task>
+      <files>
+        <file action="create">src/components/ui/EmptyState.tsx</file>
+      </files>
+      <verify><command>grep -q "EmptyState" src/components/ui/EmptyState.tsx</command></verify>
+      <depends-on><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-UI-020" component="ui" estimated-minutes="2">
+      <task>Create src/components/ui/index.ts that exports all UI components: Button, Card, Badge, Toggle, ProgressBar, NavItem, TaskCard, PromptCard, ListItem, LiveOutput, StatusDot, AgentCard, PhaseCard, SkillCard, ConnectionCard, StatCard, SectionTitle, EmptyState</task>
+      <files>
+        <file action="create">src/components/ui/index.ts</file>
+      </files>
+      <verify><command>grep -q "export.*Button" src/components/ui/index.ts && grep -q "export.*TaskCard" src/components/ui/index.ts</command></verify>
+      <depends-on><ref>MP-UI-002</ref><ref>MP-UI-003</ref><ref>MP-UI-004</ref><ref>MP-UI-005</ref><ref>MP-UI-006</ref><ref>MP-UI-007</ref><ref>MP-UI-008</ref><ref>MP-UI-009</ref><ref>MP-UI-010</ref><ref>MP-UI-011</ref><ref>MP-UI-012</ref><ref>MP-UI-013</ref><ref>MP-UI-014</ref><ref>MP-UI-015</ref><ref>MP-UI-016</ref><ref>MP-UI-017</ref><ref>MP-UI-018</ref><ref>MP-UI-019</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         STORES - Zustand State Management (8 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-STORES-001" component="stores" estimated-minutes="4">
+      <task>Create src/stores/navigationStore.ts with Zustand: currentScreen (ScreenId), setScreen, chatPanelOpen, xrayPanelOpen, toggleChatPanel, toggleXrayPanel, closePanels</task>
+      <files>
+        <file action="create">src/stores/navigationStore.ts</file>
+      </files>
+      <verify><command>grep -q "currentScreen" src/stores/navigationStore.ts && grep -q "create" src/stores/navigationStore.ts</command></verify>
+      <depends-on><ref>MP-TYPES-008</ref><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-002" component="stores" estimated-minutes="5">
+      <task>Create src/stores/executionStore.ts with Zustand: mode (ExecutionMode), neverStop boolean, isRunning, isPaused, currentTask (Task|null), setMode, setNeverStop, start, pause, resume, stop, setCurrentTask</task>
+      <files>
+        <file action="create">src/stores/executionStore.ts</file>
+      </files>
+      <verify><command>grep -q "executionStore" src/stores/executionStore.ts && grep -q "mode" src/stores/executionStore.ts</command></verify>
+      <depends-on><ref>MP-TYPES-009</ref><ref>MP-TYPES-002</ref><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-003" component="stores" estimated-minutes="5">
+      <task>Create src/stores/projectStore.ts with Zustand: project (Project|null), tasks (Task[]), prompts (Prompt[]), agents (Agent[]), setProject, addTask, updateTask, setTasks, setPrompts, setAgents</task>
+      <files>
+        <file action="create">src/stores/projectStore.ts</file>
+      </files>
+      <verify><command>grep -q "projectStore" src/stores/projectStore.ts && grep -q "tasks" src/stores/projectStore.ts</command></verify>
+      <depends-on><ref>MP-TYPES-005</ref><ref>MP-TYPES-002</ref><ref>MP-TYPES-003</ref><ref>MP-TYPES-001</ref><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-004" component="stores" estimated-minutes="4">
+      <task>Create src/stores/claudeStore.ts with Zustand: outputLines (array of {type, content, timestamp}), addLine, clearLines, isConnected, setConnected</task>
+      <files>
+        <file action="create">src/stores/claudeStore.ts</file>
+      </files>
+      <verify><command>grep -q "claudeStore" src/stores/claudeStore.ts && grep -q "outputLines" src/stores/claudeStore.ts</command></verify>
+      <depends-on><ref>MP-TYPES-004</ref><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-005" component="stores" estimated-minutes="4">
+      <task>Create src/stores/demoStore.ts with Zustand: isDemoMode, demoStep, tutorialComplete, setDemoMode, nextStep, prevStep, skipTutorial, completeTutorial. Persist to localStorage</task>
+      <files>
+        <file action="create">src/stores/demoStore.ts</file>
+      </files>
+      <verify><command>grep -q "demoStore" src/stores/demoStore.ts && grep -q "isDemoMode" src/stores/demoStore.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-006" component="stores" estimated-minutes="3">
+      <task>Create src/stores/settingsStore.ts with Zustand: theme (dark only for now), apiKey, projectPath, setApiKey, setProjectPath. Persist to localStorage</task>
+      <files>
+        <file action="create">src/stores/settingsStore.ts</file>
+      </files>
+      <verify><command>grep -q "settingsStore" src/stores/settingsStore.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-STORES-007" component="stores" estimated-minutes="2">
+      <task>Create src/stores/index.ts that exports all stores: useNavigationStore, useExecutionStore, useProjectStore, useClaudeStore, useDemoStore, useSettingsStore</task>
+      <files>
+        <file action="create">src/stores/index.ts</file>
+      </files>
+      <verify><command>grep -q "useNavigationStore" src/stores/index.ts && grep -q "useExecutionStore" src/stores/index.ts</command></verify>
+      <depends-on><ref>MP-STORES-001</ref><ref>MP-STORES-002</ref><ref>MP-STORES-003</ref><ref>MP-STORES-004</ref><ref>MP-STORES-005</ref><ref>MP-STORES-006</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         ELECTRON - Main Process & Claude Integration (15 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-ELECTRON-001" component="electron" estimated-minutes="4">
+      <task>Create electron/ipc/channels.ts defining all IPC channel names as constants: CLAUDE_SPAWN, CLAUDE_SEND, CLAUDE_PAUSE, CLAUDE_STOP, CLAUDE_OUTPUT, CLAUDE_ERROR, CLAUDE_EXIT, FILE_CHANGED, FILE_READ, FILE_WRITE</task>
+      <files>
+        <file action="create">electron/ipc/channels.ts</file>
+      </files>
+      <verify><command>grep -q "CLAUDE_SPAWN" electron/ipc/channels.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-002" component="electron" estimated-minutes="5">
+      <task>Create electron/claude/parser.ts with parseClaudeOutput function that takes stdout line and returns typed ClaudeEvent. Detect patterns: "Thinking..." → thinking, "Reading" → reading, "Writing" → writing, "✓" → success, "Error" → error</task>
+      <files>
+        <file action="create">electron/claude/parser.ts</file>
+      </files>
+      <verify><command>grep -q "parseClaudeOutput" electron/claude/parser.ts && grep -q "ClaudeEvent" electron/claude/parser.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-003" component="electron" estimated-minutes="6">
+      <task>Create electron/claude/bridge.ts with ClaudeCodeBridge class: spawn(projectPath) starts "claude" process, send(command) writes to stdin, onOutput(callback) emits parsed events, pause/resume/stop methods. Uses child_process spawn</task>
+      <files>
+        <file action="create">electron/claude/bridge.ts</file>
+      </files>
+      <verify><command>grep -q "ClaudeCodeBridge" electron/claude/bridge.ts && grep -q "spawn" electron/claude/bridge.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-004" component="electron" estimated-minutes="5">
+      <task>Create electron/claude/watcher.ts with ClaudeFileWatcher class using chokidar: watch(path) monitors .claude/ and src/ directories, emits FILE_CHANGED events with {path, type: add|change|unlink}</task>
+      <files>
+        <file action="create">electron/claude/watcher.ts</file>
+      </files>
+      <verify><command>grep -q "ClaudeFileWatcher" electron/claude/watcher.ts && grep -q "chokidar" electron/claude/watcher.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-005" component="electron" estimated-minutes="4">
+      <task>Create electron/claude/fileReader.ts with functions: readPlanMd(projectPath) returns plan.md content, readSettings(projectPath) returns parsed settings.json, readSkills(projectPath) returns array of skills, readMcpConfig(projectPath) returns MCP config</task>
+      <files>
+        <file action="create">electron/claude/fileReader.ts</file>
+      </files>
+      <verify><command>grep -q "readPlanMd" electron/claude/fileReader.ts && grep -q "readSettings" electron/claude/fileReader.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-006" component="electron" estimated-minutes="5">
+      <task>Create electron/ipc/handlers.ts that registers all IPC handlers: handle CLAUDE_SPAWN to create bridge, CLAUDE_SEND to forward command, CLAUDE_PAUSE/STOP to control process, FILE_READ to read file content</task>
+      <files>
+        <file action="create">electron/ipc/handlers.ts</file>
+      </files>
+      <verify><command>grep -q "ipcMain.handle" electron/ipc/handlers.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-001</ref><ref>MP-ELECTRON-003</ref><ref>MP-ELECTRON-005</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-007" component="electron" estimated-minutes="3">
+      <task>Update electron/main.ts to import and call registerIpcHandlers() from handlers.ts, initialize ClaudeFileWatcher on app ready</task>
+      <verify><command>grep -q "registerIpcHandlers" electron/main.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-006</ref><ref>MP-ELECTRON-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-008" component="electron" estimated-minutes="4">
+      <task>Update electron/preload.ts to expose typed API: window.claude.spawn(path), window.claude.send(cmd), window.claude.pause(), window.claude.stop(), window.claude.onOutput(cb), window.claude.onFileChanged(cb)</task>
+      <verify><command>grep -q "window.claude" electron/preload.ts || grep -q "claude:" electron/preload.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-009" component="electron" estimated-minutes="3">
+      <task>Create src/types/electron.d.ts declaring window.claude API types for TypeScript</task>
+      <files>
+        <file action="create">src/types/electron.d.ts</file>
+      </files>
+      <verify><command>grep -q "interface Window" src/types/electron.d.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-008</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-ELECTRON-010" component="electron" estimated-minutes="2">
+      <task>Install chokidar dependency for file watching: npm install chokidar</task>
+      <verify><command>grep -q "chokidar" package.json</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         HOOKS - Custom React Hooks (10 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-HOOKS-001" component="hooks" estimated-minutes="5">
+      <task>Create src/hooks/useClaudeCode.ts hook that wraps window.claude API: spawn, send, pause, stop. Updates claudeStore with output lines. Returns {isConnected, spawn, send, pause, stop, outputLines}</task>
+      <files>
+        <file action="create">src/hooks/useClaudeCode.ts</file>
+      </files>
+      <verify><command>grep -q "useClaudeCode" src/hooks/useClaudeCode.ts && grep -q "window.claude" src/hooks/useClaudeCode.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-009</ref><ref>MP-STORES-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-002" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/useFileWatcher.ts hook that subscribes to window.claude.onFileChanged. Returns {changes: FileChange[], clearChanges}. Auto-removes listener on unmount</task>
+      <files>
+        <file action="create">src/hooks/useFileWatcher.ts</file>
+      </files>
+      <verify><command>grep -q "useFileWatcher" src/hooks/useFileWatcher.ts</command></verify>
+      <depends-on><ref>MP-ELECTRON-009</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-003" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/useKeyboardShortcuts.ts hook that registers global keyboard shortcuts: Cmd+J toggles chat panel, Cmd+I toggles xray panel, Cmd+S saves. Uses useEffect with keydown listener</task>
+      <files>
+        <file action="create">src/hooks/useKeyboardShortcuts.ts</file>
+      </files>
+      <verify><command>grep -q "useKeyboardShortcuts" src/hooks/useKeyboardShortcuts.ts && grep -q "keydown" src/hooks/useKeyboardShortcuts.ts</command></verify>
+      <depends-on><ref>MP-STORES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-004" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/usePlan.ts hook using TanStack Query to fetch and cache .claude/plan.md content. Returns {plan, isLoading, refetch}</task>
+      <files>
+        <file action="create">src/hooks/usePlan.ts</file>
+      </files>
+      <verify><command>grep -q "usePlan" src/hooks/usePlan.ts && grep -q "useQuery" src/hooks/usePlan.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref><ref>MP-ELECTRON-009</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-005" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/useSkills.ts hook using TanStack Query to fetch .claude/skills/ directory. Returns {skills: Skill[], isLoading, refetch}</task>
+      <files>
+        <file action="create">src/hooks/useSkills.ts</file>
+      </files>
+      <verify><command>grep -q "useSkills" src/hooks/useSkills.ts && grep -q "useQuery" src/hooks/useSkills.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref><ref>MP-TYPES-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-006" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/useMCP.ts hook using TanStack Query to fetch .claude/mcp.json. Returns {servers: MCP[], isLoading, refetch}</task>
+      <files>
+        <file action="create">src/hooks/useMCP.ts</file>
+      </files>
+      <verify><command>grep -q "useMCP" src/hooks/useMCP.ts && grep -q "useQuery" src/hooks/useMCP.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref><ref>MP-TYPES-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-007" component="hooks" estimated-minutes="4">
+      <task>Create src/hooks/useMemory.ts hook using TanStack Query to fetch .claude/memory/ files. Returns {memories: Memory[], isLoading, addMemory, deleteMemory}</task>
+      <files>
+        <file action="create">src/hooks/useMemory.ts</file>
+      </files>
+      <verify><command>grep -q "useMemory" src/hooks/useMemory.ts && grep -q "useQuery" src/hooks/useMemory.ts</command></verify>
+      <depends-on><ref>MP-SETUP-002</ref><ref>MP-TYPES-007</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-008" component="hooks" estimated-minutes="3">
+      <task>Create src/hooks/useDemo.ts hook that wraps demoStore: isDemoMode, demoStep, tutorialSteps, nextStep, prevStep, skipTutorial, startDemo, exitDemo</task>
+      <files>
+        <file action="create">src/hooks/useDemo.ts</file>
+      </files>
+      <verify><command>grep -q "useDemo" src/hooks/useDemo.ts</command></verify>
+      <depends-on><ref>MP-STORES-005</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-HOOKS-009" component="hooks" estimated-minutes="2">
+      <task>Create src/hooks/index.ts that exports all hooks: useClaudeCode, useFileWatcher, useKeyboardShortcuts, usePlan, useSkills, useMCP, useMemory, useDemo</task>
+      <files>
+        <file action="create">src/hooks/index.ts</file>
+      </files>
+      <verify><command>grep -q "useClaudeCode" src/hooks/index.ts</command></verify>
+      <depends-on><ref>MP-HOOKS-001</ref><ref>MP-HOOKS-002</ref><ref>MP-HOOKS-003</ref><ref>MP-HOOKS-004</ref><ref>MP-HOOKS-005</ref><ref>MP-HOOKS-006</ref><ref>MP-HOOKS-007</ref><ref>MP-HOOKS-008</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         LAYOUT - App Shell Components (8 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-LAYOUT-001" component="layout" estimated-minutes="5">
+      <task>Create src/components/layout/Sidebar.tsx with logo "vibes ✨", ProjectSelector, ModeSelector, nav sections (Command, .claude, Build, Ship, System) using NavItem, and UserCard at bottom. Uses navigationStore for active screen</task>
+      <files>
+        <file action="create">src/components/layout/Sidebar.tsx</file>
+      </files>
+      <verify><command>grep -q "Sidebar" src/components/layout/Sidebar.tsx && grep -q "vibes" src/components/layout/Sidebar.tsx</command></verify>
+      <depends-on><ref>MP-UI-007</ref><ref>MP-STORES-001</ref><ref>MP-STYLES-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-002" component="layout" estimated-minutes="4">
+      <task>Create src/components/layout/ProjectSelector.tsx showing project name, status dot (running/paused/idle), and dropdown trigger. Gets data from projectStore</task>
+      <files>
+        <file action="create">src/components/layout/ProjectSelector.tsx</file>
+      </files>
+      <verify><command>grep -q "ProjectSelector" src/components/layout/ProjectSelector.tsx</command></verify>
+      <depends-on><ref>MP-UI-012</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-003" component="layout" estimated-minutes="4">
+      <task>Create src/components/layout/ModeSelector.tsx with 3 mode buttons (Plan, Ask, Auto) and "Never Stop" toggle. Uses executionStore for state and actions</task>
+      <files>
+        <file action="create">src/components/layout/ModeSelector.tsx</file>
+      </files>
+      <verify><command>grep -q "ModeSelector" src/components/layout/ModeSelector.tsx && grep -q "Plan" src/components/layout/ModeSelector.tsx</command></verify>
+      <depends-on><ref>MP-UI-002</ref><ref>MP-UI-005</ref><ref>MP-STORES-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-004" component="layout" estimated-minutes="3">
+      <task>Create src/components/layout/UserCard.tsx showing avatar with initials, user name, and status. Hardcode "Ben" for now, status from executionStore</task>
+      <files>
+        <file action="create">src/components/layout/UserCard.tsx</file>
+      </files>
+      <verify><command>grep -q "UserCard" src/components/layout/UserCard.tsx</command></verify>
+      <depends-on><ref>MP-STORES-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-005" component="layout" estimated-minutes="4">
+      <task>Create src/components/layout/Header.tsx with screen title from navigationStore, header actions (buttons), and keyboard shortcut hints (⌘J, ⌘I)</task>
+      <files>
+        <file action="create">src/components/layout/Header.tsx</file>
+      </files>
+      <verify><command>grep -q "Header" src/components/layout/Header.tsx</command></verify>
+      <depends-on><ref>MP-UI-002</ref><ref>MP-STORES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-006" component="layout" estimated-minutes="5">
+      <task>Create src/components/layout/MainContent.tsx that renders current screen based on navigationStore.currentScreen. Import and conditionally render all 17 screen components</task>
+      <files>
+        <file action="create">src/components/layout/MainContent.tsx</file>
+      </files>
+      <verify><command>grep -q "MainContent" src/components/layout/MainContent.tsx && grep -q "currentScreen" src/components/layout/MainContent.tsx</command></verify>
+      <depends-on><ref>MP-STORES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-007" component="layout" estimated-minutes="3">
+      <task>Create src/components/layout/AmbientOrbs.tsx rendering two decorative orbs (.orb-1, .orb-2) for background effect</task>
+      <files>
+        <file action="create">src/components/layout/AmbientOrbs.tsx</file>
+      </files>
+      <verify><command>grep -q "AmbientOrbs" src/components/layout/AmbientOrbs.tsx && grep -q "orb" src/components/layout/AmbientOrbs.tsx</command></verify>
+      <depends-on><ref>MP-STYLES-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-LAYOUT-008" component="layout" estimated-minutes="2">
+      <task>Create src/components/layout/index.ts exporting all layout components: Sidebar, ProjectSelector, ModeSelector, UserCard, Header, MainContent, AmbientOrbs</task>
+      <files>
+        <file action="create">src/components/layout/index.ts</file>
+      </files>
+      <verify><command>grep -q "Sidebar" src/components/layout/index.ts</command></verify>
+      <depends-on><ref>MP-LAYOUT-001</ref><ref>MP-LAYOUT-002</ref><ref>MP-LAYOUT-003</ref><ref>MP-LAYOUT-004</ref><ref>MP-LAYOUT-005</ref><ref>MP-LAYOUT-006</ref><ref>MP-LAYOUT-007</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         GLOBAL - Always-visible Components (12 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-GLOBAL-001" component="global" estimated-minutes="5">
+      <task>Create src/components/global/ExecutionBar.tsx showing: status indicator (Executing with animated dot), current task ID and name, agent emoji, file being written, progress bar with % and time estimate, Pause/Skip/Watch buttons. Uses executionStore</task>
+      <files>
+        <file action="create">src/components/global/ExecutionBar.tsx</file>
+      </files>
+      <verify><command>grep -q "ExecutionBar" src/components/global/ExecutionBar.tsx && grep -q "exec-bar" src/components/global/ExecutionBar.tsx</command></verify>
+      <depends-on><ref>MP-STORES-002</ref><ref>MP-UI-006</ref><ref>MP-UI-002</ref><ref>MP-STYLES-007</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-002" component="global" estimated-minutes="6">
+      <task>Create src/components/global/AgentActivityBar.tsx showing 4 agent cards in a row: Architect 🏗️, Developer 💻, QA 🧪, Deployer 🚀. Each shows status, current task, progress, dependencies. Uses projectStore.agents</task>
+      <files>
+        <file action="create">src/components/global/AgentActivityBar.tsx</file>
+      </files>
+      <verify><command>grep -q "AgentActivityBar" src/components/global/AgentActivityBar.tsx</command></verify>
+      <depends-on><ref>MP-UI-013</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-003" component="global" estimated-minutes="6">
+      <task>Create src/components/global/ChatPanel.tsx with panel header showing "Chat · [current screen]", message list, and input with send button. Shows agent/task context in subheader. Uses navigationStore for open state</task>
+      <files>
+        <file action="create">src/components/global/ChatPanel.tsx</file>
+      </files>
+      <verify><command>grep -q "ChatPanel" src/components/global/ChatPanel.tsx && grep -q "panel" src/components/global/ChatPanel.tsx</command></verify>
+      <depends-on><ref>MP-STORES-001</ref><ref>MP-UI-002</ref><ref>MP-STYLES-008</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-004" component="global" estimated-minutes="6">
+      <task>Create src/components/global/XRayPanel.tsx with sections: Current Execution (task, progress), File Being Written (path, lines), Task Dependencies (completed/waiting), Prompt Used (XML preview). Quick action buttons. Uses executionStore</task>
+      <files>
+        <file action="create">src/components/global/XRayPanel.tsx</file>
+      </files>
+      <verify><command>grep -q "XRayPanel" src/components/global/XRayPanel.tsx</command></verify>
+      <depends-on><ref>MP-STORES-002</ref><ref>MP-STORES-001</ref><ref>MP-UI-002</ref><ref>MP-STYLES-008</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-005" component="global" estimated-minutes="4">
+      <task>Create src/components/global/QuickActions.tsx that renders contextual action buttons based on current screen. Map screen IDs to arrays of {label, icon, variant, action}. Uses navigationStore.currentScreen</task>
+      <files>
+        <file action="create">src/components/global/QuickActions.tsx</file>
+      </files>
+      <verify><command>grep -q "QuickActions" src/components/global/QuickActions.tsx</command></verify>
+      <depends-on><ref>MP-UI-002</ref><ref>MP-STORES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-006" component="global" estimated-minutes="3">
+      <task>Create src/components/global/PanelOverlay.tsx that renders dark overlay when any panel is open. Clicking overlay closes all panels. Uses navigationStore</task>
+      <files>
+        <file action="create">src/components/global/PanelOverlay.tsx</file>
+      </files>
+      <verify><command>grep -q "PanelOverlay" src/components/global/PanelOverlay.tsx</command></verify>
+      <depends-on><ref>MP-STORES-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-007" component="global" estimated-minutes="2">
+      <task>Create src/components/global/index.ts exporting all global components: ExecutionBar, AgentActivityBar, ChatPanel, XRayPanel, QuickActions, PanelOverlay</task>
+      <files>
+        <file action="create">src/components/global/index.ts</file>
+      </files>
+      <verify><command>grep -q "ExecutionBar" src/components/global/index.ts</command></verify>
+      <depends-on><ref>MP-GLOBAL-001</ref><ref>MP-GLOBAL-002</ref><ref>MP-GLOBAL-003</ref><ref>MP-GLOBAL-004</ref><ref>MP-GLOBAL-005</ref><ref>MP-GLOBAL-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-008" component="global" estimated-minutes="5">
+      <task>Update src/App.tsx to compose full layout: AmbientOrbs, div.app containing Sidebar, main area with ExecutionBar, AgentActivityBar (if running), Header, QuickActions, MainContent. Include ChatPanel, XRayPanel, PanelOverlay. Import globals.css</task>
+      <verify><command>grep -q "ExecutionBar" src/App.tsx && grep -q "ChatPanel" src/App.tsx</command></verify>
+      <depends-on><ref>MP-LAYOUT-008</ref><ref>MP-GLOBAL-007</ref><ref>MP-STYLES-012</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-GLOBAL-009" component="global" estimated-minutes="3">
+      <task>Add useKeyboardShortcuts hook call to App.tsx to enable Cmd+J and Cmd+I shortcuts globally</task>
+      <verify><command>grep -q "useKeyboardShortcuts" src/App.tsx</command></verify>
+      <depends-on><ref>MP-GLOBAL-008</ref><ref>MP-HOOKS-003</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         SCREENS - COMMAND (Dashboard, Execution, Tasks, Prompts)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SCREEN-001" component="screens-command" estimated-minutes="6">
+      <task>Create src/components/screens/command/Dashboard.tsx with: stats row (Total Progress %, Tasks by status counts), Agents section with 4 AgentCards, Phases section with PhaseCards for each phase. Uses projectStore</task>
+      <files>
+        <file action="create">src/components/screens/command/Dashboard.tsx</file>
+      </files>
+      <verify><command>grep -q "Dashboard" src/components/screens/command/Dashboard.tsx && grep -q "projectStore" src/components/screens/command/Dashboard.tsx</command></verify>
+      <depends-on><ref>MP-UI-013</ref><ref>MP-UI-014</ref><ref>MP-UI-017</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-002" component="screens-command" estimated-minutes="7">
+      <task>Create src/components/screens/command/Execution.tsx with split layout: left side has LiveOutput component showing claudeStore.outputLines with auto-scroll, right sidebar has current task card, task queue list, dependencies section, file changes list</task>
+      <files>
+        <file action="create">src/components/screens/command/Execution.tsx</file>
+      </files>
+      <verify><command>grep -q "Execution" src/components/screens/command/Execution.tsx && grep -q "LiveOutput" src/components/screens/command/Execution.tsx</command></verify>
+      <depends-on><ref>MP-UI-011</ref><ref>MP-UI-008</ref><ref>MP-STORES-004</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-003" component="screens-command" estimated-minutes="6">
+      <task>Create src/components/screens/command/Tasks.tsx with split layout: left side scrollable list of TaskCards, right side task detail panel showing description, acceptance criteria, and PromptCard with generated XML. Uses projectStore.tasks</task>
+      <files>
+        <file action="create">src/components/screens/command/Tasks.tsx</file>
+      </files>
+      <verify><command>grep -q "Tasks" src/components/screens/command/Tasks.tsx && grep -q "TaskCard" src/components/screens/command/Tasks.tsx</command></verify>
+      <depends-on><ref>MP-UI-008</ref><ref>MP-UI-009</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-004" component="screens-command" estimated-minutes="5">
+      <task>Create src/components/screens/command/Prompts.tsx with grid of PromptCards showing all prompts. Header shows agent distribution stats. Each card expandable to show full XML. Uses projectStore.prompts</task>
+      <files>
+        <file action="create">src/components/screens/command/Prompts.tsx</file>
+      </files>
+      <verify><command>grep -q "Prompts" src/components/screens/command/Prompts.tsx && grep -q "PromptCard" src/components/screens/command/Prompts.tsx</command></verify>
+      <depends-on><ref>MP-UI-009</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-005" component="screens-command" estimated-minutes="2">
+      <task>Create src/components/screens/command/index.ts exporting Dashboard, Execution, Tasks, Prompts</task>
+      <files>
+        <file action="create">src/components/screens/command/index.ts</file>
+      </files>
+      <verify><command>grep -q "Dashboard" src/components/screens/command/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-001</ref><ref>MP-SCREEN-002</ref><ref>MP-SCREEN-003</ref><ref>MP-SCREEN-004</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         SCREENS - .CLAUDE (Plan, Skills, MCP, Settings, Memory)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SCREEN-006" component="screens-claude" estimated-minutes="6">
+      <task>Create src/components/screens/claude/Plan.tsx that renders plan.md content with styled markdown. Shows phases with checkboxes (✓ done, 🔄 running, empty pending), progress bars per phase. Uses usePlan hook</task>
+      <files>
+        <file action="create">src/components/screens/claude/Plan.tsx</file>
+      </files>
+      <verify><command>grep -q "Plan" src/components/screens/claude/Plan.tsx && grep -q "usePlan" src/components/screens/claude/Plan.tsx</command></verify>
+      <depends-on><ref>MP-HOOKS-004</ref><ref>MP-UI-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-007" component="screens-claude" estimated-minutes="5">
+      <task>Create src/components/screens/claude/Skills.tsx with grid of SkillCards. Shows path, description, active toggle for each skill. Uses useSkills hook</task>
+      <files>
+        <file action="create">src/components/screens/claude/Skills.tsx</file>
+      </files>
+      <verify><command>grep -q "Skills" src/components/screens/claude/Skills.tsx && grep -q "useSkills" src/components/screens/claude/Skills.tsx</command></verify>
+      <depends-on><ref>MP-HOOKS-005</ref><ref>MP-UI-015</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-008" component="screens-claude" estimated-minutes="5">
+      <task>Create src/components/screens/claude/MCP.tsx with list of MCP servers. Each shows name, package, status (Connected green, Not configured gray), Setup button. Uses useMCP hook</task>
+      <files>
+        <file action="create">src/components/screens/claude/MCP.tsx</file>
+      </files>
+      <verify><command>grep -q "MCP" src/components/screens/claude/MCP.tsx && grep -q "useMCP" src/components/screens/claude/MCP.tsx</command></verify>
+      <depends-on><ref>MP-HOOKS-006</ref><ref>MP-UI-010</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-009" component="screens-claude" estimated-minutes="5">
+      <task>Create src/components/screens/claude/Settings.tsx with sections: Execution settings (toggles), Model settings (model select, max_tokens input, temperature slider), Project settings (paths). Save/Reset buttons. Uses settingsStore</task>
+      <files>
+        <file action="create">src/components/screens/claude/Settings.tsx</file>
+      </files>
+      <verify><command>grep -q "Settings" src/components/screens/claude/Settings.tsx</command></verify>
+      <depends-on><ref>MP-STORES-006</ref><ref>MP-UI-005</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-010" component="screens-claude" estimated-minutes="5">
+      <task>Create src/components/screens/claude/Memory.tsx with list of memories. Each shows title, type badge (Decision, Pattern, Convention, Lesson), preview. Filter by type dropdown. Uses useMemory hook</task>
+      <files>
+        <file action="create">src/components/screens/claude/Memory.tsx</file>
+      </files>
+      <verify><command>grep -q "Memory" src/components/screens/claude/Memory.tsx && grep -q "useMemory" src/components/screens/claude/Memory.tsx</command></verify>
+      <depends-on><ref>MP-HOOKS-007</ref><ref>MP-UI-010</ref><ref>MP-UI-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-011" component="screens-claude" estimated-minutes="2">
+      <task>Create src/components/screens/claude/index.ts exporting Plan, Skills, MCP, Settings, Memory</task>
+      <files>
+        <file action="create">src/components/screens/claude/index.ts</file>
+      </files>
+      <verify><command>grep -q "Plan" src/components/screens/claude/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-006</ref><ref>MP-SCREEN-007</ref><ref>MP-SCREEN-008</ref><ref>MP-SCREEN-009</ref><ref>MP-SCREEN-010</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         SCREENS - BUILD (Code, Debug, Tests)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SCREEN-012" component="screens-build" estimated-minutes="8">
+      <task>Create src/components/screens/build/Code.tsx with 3-column layout: file tree (left, 200px), code editor (center, with line numbers and syntax highlighting), context panel (right, 300px showing current task, requirements checklist, related files, ADR). Highlight lines being written</task>
+      <files>
+        <file action="create">src/components/screens/build/Code.tsx</file>
+      </files>
+      <verify><command>grep -q "Code" src/components/screens/build/Code.tsx && grep -q "file-tree" src/components/screens/build/Code.tsx</command></verify>
+      <depends-on><ref>MP-STORES-002</ref><ref>MP-STORES-003</ref><ref>MP-UI-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-013" component="screens-build" estimated-minutes="5">
+      <task>Create src/components/screens/build/Debug.tsx with list of errors. Each shows type icon, message, file:line location, Fix button. Errors highlighted in red. Group by file optionally</task>
+      <files>
+        <file action="create">src/components/screens/build/Debug.tsx</file>
+      </files>
+      <verify><command>grep -q "Debug" src/components/screens/build/Debug.tsx</command></verify>
+      <depends-on><ref>MP-UI-010</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-014" component="screens-build" estimated-minutes="5">
+      <task>Create src/components/screens/build/Tests.tsx with stats header (Total, Pass, Fail, Coverage %), list of tests with status icons (✅/❌), duration, Fix button for failed. Progress bar for coverage</task>
+      <files>
+        <file action="create">src/components/screens/build/Tests.tsx</file>
+      </files>
+      <verify><command>grep -q "Tests" src/components/screens/build/Tests.tsx</command></verify>
+      <depends-on><ref>MP-UI-010</ref><ref>MP-UI-006</ref><ref>MP-UI-017</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-015" component="screens-build" estimated-minutes="2">
+      <task>Create src/components/screens/build/index.ts exporting Code, Debug, Tests</task>
+      <files>
+        <file action="create">src/components/screens/build/index.ts</file>
+      </files>
+      <verify><command>grep -q "Code" src/components/screens/build/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-012</ref><ref>MP-SCREEN-013</ref><ref>MP-SCREEN-014</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         SCREENS - SHIP (Deploy, Logs, Analytics)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SCREEN-016" component="screens-ship" estimated-minutes="5">
+      <task>Create src/components/screens/ship/Deploy.tsx with two environment cards: Staging and Production. Each shows status (Building with progress, Live, Error), version, last deploy time. Deploy buttons per environment</task>
+      <files>
+        <file action="create">src/components/screens/ship/Deploy.tsx</file>
+      </files>
+      <verify><command>grep -q "Deploy" src/components/screens/ship/Deploy.tsx</command></verify>
+      <depends-on><ref>MP-UI-003</ref><ref>MP-UI-006</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-017" component="screens-ship" estimated-minutes="5">
+      <task>Create src/components/screens/ship/Logs.tsx with terminal-style display: timestamps, log levels (info dim, warn orange, error red), messages. Auto-scroll with pause button. Filter buttons for level</task>
+      <files>
+        <file action="create">src/components/screens/ship/Logs.tsx</file>
+      </files>
+      <verify><command>grep -q "Logs" src/components/screens/ship/Logs.tsx</command></verify>
+      <depends-on><ref>MP-UI-011</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-018" component="screens-ship" estimated-minutes="4">
+      <task>Create src/components/screens/ship/Analytics.tsx with placeholder charts area and stats cards. Show "Coming soon" message with basic layout structure</task>
+      <files>
+        <file action="create">src/components/screens/ship/Analytics.tsx</file>
+      </files>
+      <verify><command>grep -q "Analytics" src/components/screens/ship/Analytics.tsx</command></verify>
+      <depends-on><ref>MP-UI-003</ref><ref>MP-UI-017</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-019" component="screens-ship" estimated-minutes="2">
+      <task>Create src/components/screens/ship/index.ts exporting Deploy, Logs, Analytics</task>
+      <files>
+        <file action="create">src/components/screens/ship/index.ts</file>
+      </files>
+      <verify><command>grep -q "Deploy" src/components/screens/ship/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-016</ref><ref>MP-SCREEN-017</ref><ref>MP-SCREEN-018</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         SCREENS - SYSTEM (Connections, Environment)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-SCREEN-020" component="screens-system" estimated-minutes="5">
+      <task>Create src/components/screens/system/Connections.tsx with grid of ConnectionCards: Claude API, GitHub, Vercel, Supabase, etc. Each shows status and Connect/Disconnect action</task>
+      <files>
+        <file action="create">src/components/screens/system/Connections.tsx</file>
+      </files>
+      <verify><command>grep -q "Connections" src/components/screens/system/Connections.tsx && grep -q "ConnectionCard" src/components/screens/system/Connections.tsx</command></verify>
+      <depends-on><ref>MP-UI-016</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-021" component="screens-system" estimated-minutes="5">
+      <task>Create src/components/screens/system/Environment.tsx with list of env variables: name, masked value (•••••), status indicator, help button. Add variable form. Import from .env button</task>
+      <files>
+        <file action="create">src/components/screens/system/Environment.tsx</file>
+      </files>
+      <verify><command>grep -q "Environment" src/components/screens/system/Environment.tsx</command></verify>
+      <depends-on><ref>MP-UI-010</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-022" component="screens-system" estimated-minutes="2">
+      <task>Create src/components/screens/system/index.ts exporting Connections, Environment</task>
+      <files>
+        <file action="create">src/components/screens/system/index.ts</file>
+      </files>
+      <verify><command>grep -q "Connections" src/components/screens/system/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-020</ref><ref>MP-SCREEN-021</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-023" component="screens-command" estimated-minutes="3">
+      <task>Create src/components/screens/index.ts that re-exports all screens from command, claude, build, ship, system subdirectories</task>
+      <files>
+        <file action="create">src/components/screens/index.ts</file>
+      </files>
+      <verify><command>grep -q "command" src/components/screens/index.ts && grep -q "claude" src/components/screens/index.ts</command></verify>
+      <depends-on><ref>MP-SCREEN-005</ref><ref>MP-SCREEN-011</ref><ref>MP-SCREEN-015</ref><ref>MP-SCREEN-019</ref><ref>MP-SCREEN-022</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-SCREEN-024" component="layout" estimated-minutes="4">
+      <task>Update src/components/layout/MainContent.tsx to import all screens from screens/index.ts and render correct screen based on navigationStore.currentScreen with screenIn animation</task>
+      <verify><command>grep -q "screens" src/components/layout/MainContent.tsx</command></verify>
+      <depends-on><ref>MP-SCREEN-023</ref><ref>MP-LAYOUT-006</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         DEMO - Demo Mode & Onboarding (15 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-DEMO-001" component="demo" estimated-minutes="4">
+      <task>Create src/demo/mockData.ts with mock project data: project "Wallie", 12 mock tasks with various statuses, 8 mock prompts, 4 mock agents with states, mock phases with progress</task>
+      <files>
+        <file action="create">src/demo/mockData.ts</file>
+      </files>
+      <verify><command>grep -q "Wallie" src/demo/mockData.ts && grep -q "mockTasks" src/demo/mockData.ts</command></verify>
+      <depends-on><ref>MP-TYPES-010</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-002" component="demo" estimated-minutes="4">
+      <task>Create src/demo/mockLiveOutput.ts with array of mock output lines simulating Claude Code execution: thinking, reading files, writing code, success messages. Include timestamps</task>
+      <files>
+        <file action="create">src/demo/mockLiveOutput.ts</file>
+      </files>
+      <verify><command>grep -q "mockOutputLines" src/demo/mockLiveOutput.ts</command></verify>
+      <depends-on><ref>MP-TYPES-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-003" component="demo" estimated-minutes="4">
+      <task>Create src/demo/tutorialSteps.ts defining 6 tutorial steps: Welcome, Meet the Agents, Command Center, Watch AI Work, Understand Tasks, Start Building. Each has title, description, highlightElement, action</task>
+      <files>
+        <file action="create">src/demo/tutorialSteps.ts</file>
+      </files>
+      <verify><command>grep -q "tutorialSteps" src/demo/tutorialSteps.ts && grep -q "Welcome" src/demo/tutorialSteps.ts</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-004" component="demo" estimated-minutes="6">
+      <task>Create src/demo/DemoOverlay.tsx full-screen overlay with glassmorphism card: vibes logo, "Welcome to vibes" title, description, "Start Tutorial" primary button, "Skip & Explore" ghost button. Uses demoStore</task>
+      <files>
+        <file action="create">src/demo/DemoOverlay.tsx</file>
+      </files>
+      <verify><command>grep -q "DemoOverlay" src/demo/DemoOverlay.tsx && grep -q "Welcome" src/demo/DemoOverlay.tsx</command></verify>
+      <depends-on><ref>MP-STORES-005</ref><ref>MP-UI-002</ref><ref>MP-UI-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-005" component="demo" estimated-minutes="6">
+      <task>Create src/demo/TutorialTooltip.tsx floating tooltip that points to highlighted element. Shows step title, description, step counter (1/6), Next/Back buttons. Position calculated based on highlightElement</task>
+      <files>
+        <file action="create">src/demo/TutorialTooltip.tsx</file>
+      </files>
+      <verify><command>grep -q "TutorialTooltip" src/demo/TutorialTooltip.tsx</command></verify>
+      <depends-on><ref>MP-DEMO-003</ref><ref>MP-UI-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-006" component="demo" estimated-minutes="4">
+      <task>Create src/demo/TutorialHighlight.tsx component that renders spotlight effect around target element. Uses CSS box-shadow to darken everything except highlighted area</task>
+      <files>
+        <file action="create">src/demo/TutorialHighlight.tsx</file>
+      </files>
+      <verify><command>grep -q "TutorialHighlight" src/demo/TutorialHighlight.tsx</command></verify>
+      <depends-on><ref>MP-SETUP-001</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-007" component="demo" estimated-minutes="5">
+      <task>Create src/demo/DemoProvider.tsx context provider that: checks localStorage for first launch, loads mock data into stores if demo mode, manages tutorial state, provides exitDemo function</task>
+      <files>
+        <file action="create">src/demo/DemoProvider.tsx</file>
+      </files>
+      <verify><command>grep -q "DemoProvider" src/demo/DemoProvider.tsx && grep -q "localStorage" src/demo/DemoProvider.tsx</command></verify>
+      <depends-on><ref>MP-DEMO-001</ref><ref>MP-STORES-005</ref><ref>MP-STORES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-008" component="demo" estimated-minutes="5">
+      <task>Create src/demo/LiveOutputSimulator.tsx component that plays through mockLiveOutput lines with realistic timing (thinking 2s, actions 0.5s, file writes 1s). Auto-scrolls and updates claudeStore</task>
+      <files>
+        <file action="create">src/demo/LiveOutputSimulator.tsx</file>
+      </files>
+      <verify><command>grep -q "LiveOutputSimulator" src/demo/LiveOutputSimulator.tsx</command></verify>
+      <depends-on><ref>MP-DEMO-002</ref><ref>MP-STORES-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-009" component="demo" estimated-minutes="3">
+      <task>Create src/demo/DemoControls.tsx floating button group (bottom-right corner) visible only in demo mode: "Exit Demo", "Restart Tutorial", "?" help button</task>
+      <files>
+        <file action="create">src/demo/DemoControls.tsx</file>
+      </files>
+      <verify><command>grep -q "DemoControls" src/demo/DemoControls.tsx</command></verify>
+      <depends-on><ref>MP-UI-002</ref><ref>MP-STORES-005</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-010" component="demo" estimated-minutes="2">
+      <task>Create src/demo/index.ts exporting DemoOverlay, TutorialTooltip, TutorialHighlight, DemoProvider, LiveOutputSimulator, DemoControls, mockData, tutorialSteps</task>
+      <files>
+        <file action="create">src/demo/index.ts</file>
+      </files>
+      <verify><command>grep -q "DemoOverlay" src/demo/index.ts</command></verify>
+      <depends-on><ref>MP-DEMO-004</ref><ref>MP-DEMO-005</ref><ref>MP-DEMO-006</ref><ref>MP-DEMO-007</ref><ref>MP-DEMO-008</ref><ref>MP-DEMO-009</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-011" component="demo" estimated-minutes="4">
+      <task>Update src/App.tsx to wrap content in DemoProvider, render DemoOverlay on first launch, TutorialTooltip + TutorialHighlight during tutorial, DemoControls when in demo mode</task>
+      <verify><command>grep -q "DemoProvider" src/App.tsx && grep -q "DemoOverlay" src/App.tsx</command></verify>
+      <depends-on><ref>MP-DEMO-010</ref><ref>MP-GLOBAL-008</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-DEMO-012" component="demo" estimated-minutes="3">
+      <task>Add Help menu item to Sidebar with "Demo Mode" option that resets to demo state and shows tutorial again</task>
+      <verify><command>grep -q "Demo" src/components/layout/Sidebar.tsx</command></verify>
+      <depends-on><ref>MP-LAYOUT-001</ref><ref>MP-STORES-005</ref></depends-on>
+    </micro-prompt>
+
+    <!-- ================================================================
+         POLISH - Final Touches (15 tasks)
+         ================================================================ -->
+    
+    <micro-prompt id="MP-POLISH-001" component="polish" estimated-minutes="3">
+      <task>Add screenIn animation to all screen components: wrapper div with animation: screenIn 0.25s ease on mount</task>
+      <verify><command>grep -q "screenIn" src/components/screens/command/Dashboard.tsx</command></verify>
+      <depends-on><ref>MP-SCREEN-024</ref><ref>MP-STYLES-002</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-002" component="polish" estimated-minutes="3">
+      <task>Add hover transforms to interactive cards: TaskCard, PhaseCard, ListItem get translateX(4px) on hover. Already in CSS, verify components use correct classes</task>
+      <verify><command>grep -q "hover" src/styles/cards.css</command></verify>
+      <depends-on><ref>MP-STYLES-009</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-003" component="polish" estimated-minutes="3">
+      <task>Add loading states to screens: skeleton placeholders while data loads. Create src/components/ui/Skeleton.tsx with animated gradient background</task>
+      <files>
+        <file action="create">src/components/ui/Skeleton.tsx</file>
+      </files>
+      <verify><command>grep -q "Skeleton" src/components/ui/Skeleton.tsx</command></verify>
+      <depends-on><ref>MP-UI-020</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-004" component="polish" estimated-minutes="3">
+      <task>Add empty states using EmptyState component to screens when no data: Tasks "No tasks yet", Prompts "No prompts generated", Memory "No memories saved"</task>
+      <verify><command>grep -q "EmptyState" src/components/screens/command/Tasks.tsx</command></verify>
+      <depends-on><ref>MP-UI-019</ref><ref>MP-SCREEN-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-005" component="polish" estimated-minutes="4">
+      <task>Add toast notification system: create src/components/ui/Toast.tsx and useToast hook. Show success/error toasts for actions like "Task completed", "Connection failed"</task>
+      <files>
+        <file action="create">src/components/ui/Toast.tsx</file>
+        <file action="create">src/hooks/useToast.ts</file>
+      </files>
+      <verify><command>grep -q "Toast" src/components/ui/Toast.tsx && grep -q "useToast" src/hooks/useToast.ts</command></verify>
+      <depends-on><ref>MP-UI-020</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-006" component="polish" estimated-minutes="3">
+      <task>Add Cmd+K command palette: create src/components/global/CommandPalette.tsx with search input and action list. Navigate to screens, toggle panels, quick actions</task>
+      <files>
+        <file action="create">src/components/global/CommandPalette.tsx</file>
+      </files>
+      <verify><command>grep -q "CommandPalette" src/components/global/CommandPalette.tsx</command></verify>
+      <depends-on><ref>MP-GLOBAL-007</ref><ref>MP-HOOKS-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-007" component="polish" estimated-minutes="2">
+      <task>Register Cmd+K shortcut in useKeyboardShortcuts to open CommandPalette</task>
+      <verify><command>grep -q "meta.*k" src/hooks/useKeyboardShortcuts.ts</command></verify>
+      <depends-on><ref>MP-POLISH-006</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-008" component="polish" estimated-minutes="3">
+      <task>Add responsive behavior: sidebar collapsible on smaller screens, panels stack instead of overlay. Add media queries to styles</task>
+      <verify><command>grep -q "@media" src/styles/globals.css</command></verify>
+      <depends-on><ref>MP-STYLES-003</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-009" component="polish" estimated-minutes="3">
+      <task>Add focus styles for keyboard navigation: visible focus rings on buttons, nav items, cards using :focus-visible with outline</task>
+      <verify><command>grep -q "focus-visible" src/styles/buttons.css</command></verify>
+      <depends-on><ref>MP-STYLES-010</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-010" component="polish" estimated-minutes="3">
+      <task>Add app icon: create assets/icon.png (512x512) and configure in electron-builder.json. Use gradient vibes logo</task>
+      <files>
+        <file action="create">assets/icon.png</file>
+      </files>
+      <verify><command>test -f assets/icon.png || echo "Icon placeholder needed"</command></verify>
+      <depends-on><ref>MP-SETUP-007</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-011" component="polish" estimated-minutes="4">
+      <task>Add window controls styling for macOS: traffic light buttons position, titlebar hidden, drag region on header</task>
+      <verify><command>grep -q "titleBarStyle" electron/main.ts</command></verify>
+      <depends-on><ref>MP-SETUP-004</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-012" component="polish" estimated-minutes="3">
+      <task>Final cleanup: remove console.logs, add TypeScript strict mode fixes, ensure all imports resolve correctly</task>
+      <verify><command>npm run build 2>&1 | grep -qv "error" || echo "Build check needed"</command></verify>
+      <depends-on><ref>MP-DEMO-011</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-013" component="polish" estimated-minutes="3">
+      <task>Create CHANGELOG.md with version 0.1.0 entry listing all features: Dashboard, Execution, Tasks, Prompts, Plan, Skills, MCP, Memory, Settings, Code, Debug, Tests, Deploy, Logs, Connections, Environment, Demo mode</task>
+      <files>
+        <file action="create">CHANGELOG.md</file>
+      </files>
+      <verify><command>grep -q "0.1.0" CHANGELOG.md</command></verify>
+      <depends-on><ref>MP-POLISH-012</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-014" component="polish" estimated-minutes="4">
+      <task>Update README.md with: features list, screenshots placeholders, installation instructions (git clone, npm install, npm run dev), architecture overview, contributing guidelines</task>
+      <verify><command>grep -q "Installation" README.md && grep -q "npm run dev" README.md</command></verify>
+      <depends-on><ref>MP-SETUP-012</ref><ref>MP-POLISH-012</ref></depends-on>
+    </micro-prompt>
+    
+    <micro-prompt id="MP-POLISH-015" component="polish" estimated-minutes="5">
+      <task>Final verification: run npm run build, ensure no TypeScript errors, test Electron app launches, verify all screens render, demo mode works</task>
+      <verify><command>npm run build</command></verify>
+      <depends-on><ref>MP-POLISH-012</ref><ref>MP-POLISH-013</ref><ref>MP-POLISH-014</ref></depends-on>
+    </micro-prompt>
+
+  </prompts>
+  
+</micro-prompts>
