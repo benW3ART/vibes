@@ -28,6 +28,12 @@ interface ClaudeAuthStatus {
   version?: string;
 }
 
+interface ClaudeQueryResult {
+  success: boolean;
+  response?: string;
+  error?: string;
+}
+
 interface ElectronAPI {
   claude: {
     spawn: (projectPath: string) => Promise<boolean>;
@@ -35,12 +41,15 @@ interface ElectronAPI {
     pause: () => Promise<boolean>;
     resume: () => Promise<boolean>;
     stop: () => Promise<boolean>;
+    query: (projectPath: string, prompt: string, systemPrompt?: string) => Promise<ClaudeQueryResult>;
+    queryCancel: () => Promise<boolean>;
     authStatus: () => Promise<ClaudeAuthStatus>;
     authLogin: () => Promise<{ success: boolean; error?: string }>;
     onOutput: (callback: Listener) => Unsubscribe;
     onError: (callback: Listener) => Unsubscribe;
     onExit: (callback: Listener) => Unsubscribe;
     onStatus: (callback: Listener) => Unsubscribe;
+    onQueryChunk: (callback: Listener) => Unsubscribe;
   };
   file: {
     read: (filePath: string) => Promise<string>;

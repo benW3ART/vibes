@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useNavigationStore, useProjectStore, useWorkflowStore, phaseDisplayInfo, useConnectionsStore } from '@/stores';
-import { claudeService, fileGenerationService, type ClaudeMessage, type DiscoveryContext } from '@/services';
+import { claudeService, fileGenerationService, aiWorkflowService, type ClaudeMessage, type DiscoveryContext } from '@/services';
 import { Button } from '@/components/ui';
 
 interface DisplayMessage {
@@ -26,6 +26,7 @@ export function AssistantGuide() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [claudeRunning, setClaudeRunning] = useState(false);
+  const [isAIMode, setIsAIMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const discoveryStep = useRef(0);
@@ -63,7 +64,7 @@ export function AssistantGuide() {
     };
   }, []);
 
-  // Initialize with welcome message
+  // Initialize with welcome message and check AI availability
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
@@ -71,25 +72,37 @@ export function AssistantGuide() {
     // Auto-open panel on start
     setChatPanelOpen(true);
 
-    if (!currentProject) {
-      // No project - show welcome
-      addSystemMessage(
-        "👋 **Welcome to vibes!**\n\nI'm your AI assistant and I'll guide you through all the stages of creating your project:\n\n1. 💡 **Discovery** - Understand your idea\n2. 📋 **Specs** - Define the features\n3. 🎨 **Design** - Create the visual identity\n4. 🏗️ **Architecture** - Plan the technical stack\n5. ⚡ **Execution** - Build the project\n\nTo get started, choose an option:",
-        [
-          { label: '+ New Project', action: handleNewProject, variant: 'primary' },
-          { label: '📂 Open Project', action: handleOpenProject, variant: 'secondary' },
-        ]
-      );
-    } else {
-      // Has project - resume workflow
-      addSystemMessage(
-        `👋 **Welcome back!**\n\nYou're working on **${currentProject.name}**\n\nCurrent phase: ${phaseDisplayInfo[currentPhase].icon} **${phaseDisplayInfo[currentPhase].label}**`,
-        [
-          { label: 'Continue', action: () => resumeWorkflow(), variant: 'primary' },
-          { label: 'Start Over', action: () => resetWorkflow(), variant: 'secondary' },
-        ]
-      );
-    }
+    // Check if Claude is available for AI mode
+    const checkAIAvailability = async () => {
+      const available = await aiWorkflowService.isClaudeAvailable();
+      setIsAIMode(available);
+
+      const aiStatus = available
+        ? "\n\n🤖 **AI Mode Active** - Responses powered by Claude"
+        : "\n\n💡 **Demo Mode** - Using guided wizard";
+
+      if (!currentProject) {
+        // No project - show welcome
+        addSystemMessage(
+          `👋 **Welcome to vibes!**\n\nI'm your AI assistant and I'll guide you through all the stages of creating your project:\n\n1. 💡 **Discovery** - Understand your idea\n2. 📋 **Specs** - Define the features\n3. 🎨 **Design** - Create the visual identity\n4. 🏗️ **Architecture** - Plan the technical stack\n5. ⚡ **Execution** - Build the project${aiStatus}\n\nTo get started, choose an option:`,
+          [
+            { label: '+ New Project', action: handleNewProject, variant: 'primary' },
+            { label: '📂 Open Project', action: handleOpenProject, variant: 'secondary' },
+          ]
+        );
+      } else {
+        // Has project - resume workflow
+        addSystemMessage(
+          `👋 **Welcome back!**\n\nYou're working on **${currentProject.name}**\n\nCurrent phase: ${phaseDisplayInfo[currentPhase].icon} **${phaseDisplayInfo[currentPhase].label}**${aiStatus}`,
+          [
+            { label: 'Continue', action: () => resumeWorkflow(), variant: 'primary' },
+            { label: 'Start Over', action: () => resetWorkflow(), variant: 'secondary' },
+          ]
+        );
+      }
+    };
+
+    checkAIAvailability();
   }, [currentProject, currentPhase, setChatPanelOpen]);
 
   const addSystemMessage = useCallback((content: string, actions?: DisplayMessage['actions']) => {
@@ -103,9 +116,9 @@ export function AssistantGuide() {
     setMessages(prev => [...prev, msg]);
   }, []);
 
-  const addAssistantMessage = useCallback((content: string, actions?: DisplayMessage['actions']) => {
-    setIsTyping(true);
-    setTimeout(() => {
+  const addAssistantMessage = useCallback((content: string, actions?: DisplayMessage['actions'], immediate = false) => {
+    if (immediate) {
+      // For AI streaming mode, add immediately without delay
       const msg: DisplayMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -115,8 +128,81 @@ export function AssistantGuide() {
       };
       setMessages(prev => [...prev, msg]);
       setIsTyping(false);
-    }, 500);
+    } else {
+      // For template mode, simulate typing delay
+      setIsTyping(true);
+      setTimeout(() => {
+        const msg: DisplayMessage = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content,
+          timestamp: new Date(),
+          actions,
+        };
+        setMessages(prev => [...prev, msg]);
+        setIsTyping(false);
+      }, 500);
+    }
   }, []);
+
+  // Start a streaming message and return the ID
+  const startStreamingMessage = useCallback(() => {
+    const id = `assistant-${Date.now()}`;
+    const msg: DisplayMessage = {
+      id,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+    setMessages(prev => [...prev, msg]);
+    return id;
+  }, []);
+
+  // Update streaming message content
+  const updateStreamingMessage = useCallback((id: string, content: string) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === id ? { ...msg, content } : msg
+    ));
+  }, []);
+
+  // Complete streaming message with optional actions
+  const completeStreamingMessage = useCallback((id: string, actions?: DisplayMessage['actions']) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === id ? { ...msg, isStreaming: false, actions } : msg
+    ));
+  }, []);
+
+  // Send message to AI and stream response
+  const sendToAI = useCallback(async (message: string, onComplete?: (response: string) => void) => {
+    setIsTyping(true);
+    const msgId = startStreamingMessage();
+    let fullResponse = '';
+
+    try {
+      const response = await aiWorkflowService.sendMessage(message, {
+        onStart: () => {
+          setIsTyping(false);
+        },
+        onChunk: (chunk) => {
+          fullResponse += chunk;
+          updateStreamingMessage(msgId, fullResponse);
+        },
+        onComplete: (response) => {
+          completeStreamingMessage(msgId);
+          onComplete?.(response);
+        },
+        onError: (error) => {
+          updateStreamingMessage(msgId, `❌ Error: ${error}`);
+          completeStreamingMessage(msgId);
+        },
+      });
+      return response;
+    } catch (error) {
+      completeStreamingMessage(msgId);
+      throw error;
+    }
+  }, [startStreamingMessage, updateStreamingMessage, completeStreamingMessage]);
 
   const addUserMessage = useCallback((content: string) => {
     const msg: DisplayMessage = {
@@ -183,11 +269,22 @@ export function AssistantGuide() {
       };
       setCurrentProject(project);
       await claudeService.init(project.path);
+      aiWorkflowService.init(project.path);
 
-      addAssistantMessage(
-        `✅ **Project "${name}" created!** (demo mode)\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A collaborative task management app for remote teams"*`
-      );
+      // Start discovery phase with AI or guided mode
       discoveryStep.current = 1;
+      aiWorkflowService.startPhase('discovery', { projectName: name });
+
+      if (isAIMode) {
+        // AI mode - let Claude drive the conversation
+        addAssistantMessage(`✅ **Project "${name}" created!** (demo mode)\n\nLet me help you define your project...`, undefined, true);
+        sendToAI(`I just created a new project called "${name}". Help me discover what this project should be about. Start by asking me to describe my project idea in one sentence.`);
+      } else {
+        // Guided mode - use templates
+        addAssistantMessage(
+          `✅ **Project "${name}" created!** (demo mode)\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A collaborative task management app for remote teams"*`
+        );
+      }
       return;
     }
 
@@ -213,11 +310,22 @@ export function AssistantGuide() {
               };
               setCurrentProject(project);
               await claudeService.init(result.path);
+              aiWorkflowService.init(result.path);
 
-              addAssistantMessage(
-                `✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nGenius Team structure initialized:\n- .claude/ (config & skills)\n- .genius/ (state)\n- CLAUDE.md\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A task management app for remote teams"*`
-              );
+              // Start discovery phase with AI or guided mode
               discoveryStep.current = 1;
+              aiWorkflowService.startPhase('discovery', { projectName: name });
+
+              if (isAIMode) {
+                // AI mode - let Claude drive the conversation
+                addAssistantMessage(`✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nLet me help you define your project...`, undefined, true);
+                sendToAI(`I just created a new project called "${name}" at ${result.path}. Help me discover what this project should be about. Start by asking me to describe my project idea in one sentence.`);
+              } else {
+                // Guided mode - use templates
+                addAssistantMessage(
+                  `✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nGenius Team structure initialized:\n- .claude/ (config & skills)\n- .genius/ (state)\n- CLAUDE.md\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A task management app for remote teams"*`
+                );
+              }
             } else {
               addAssistantMessage(
                 `❌ **Error**: ${result.error}\n\nWould you like to try again?`,
@@ -234,9 +342,21 @@ export function AssistantGuide() {
   const startDiscovery = () => {
     setPhase('discovery');
     discoveryStep.current = 1;
-    addAssistantMessage(
-      "💡 **Discovery Phase**\n\nI'll ask you 5 questions to better understand your project.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: \"A tech-focused freelance services marketplace\"*"
-    );
+
+    const projectPath = currentProject?.path || '';
+    aiWorkflowService.init(projectPath);
+    aiWorkflowService.startPhase('discovery', { projectName: currentProject?.name || 'Project' });
+
+    if (isAIMode) {
+      // AI mode - let Claude drive the conversation
+      addAssistantMessage("💡 **Discovery Phase**\n\nLet me help you define your project...", undefined, true);
+      sendToAI("Help me discover and define this project. Start by asking about the main project idea.");
+    } else {
+      // Guided mode - use templates
+      addAssistantMessage(
+        "💡 **Discovery Phase**\n\nI'll ask you 5 questions to better understand your project.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: \"A tech-focused freelance services marketplace\"*"
+      );
+    }
   };
 
   const handleDiscoveryAnswer = async (answer: string) => {
@@ -547,7 +667,7 @@ export function AssistantGuide() {
     hasInitialized.current = false;
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userInput = input.trim();
@@ -560,13 +680,150 @@ export function AssistantGuide() {
         // User is providing project name
         createProject(userInput);
       } else if (discoveryStep.current > 0) {
-        // User is answering discovery questions
-        handleDiscoveryAnswer(userInput);
+        if (isAIMode) {
+          // AI mode - send to Claude for natural conversation
+          await handleAIDiscovery(userInput);
+        } else {
+          // Guided mode - use template responses
+          handleDiscoveryAnswer(userInput);
+        }
       }
+    } else if (isAIMode && ['specifications', 'design', 'architecture'].includes(currentPhase)) {
+      // AI mode for other phases
+      await sendToAI(userInput);
     } else {
-      // For other phases, send to Claude service
+      // For execution and other phases, send to Claude service
       setIsTyping(true);
       claudeService.send(userInput);
+    }
+  };
+
+  // Handle AI-driven discovery conversation
+  const handleAIDiscovery = async (userInput: string) => {
+    // Track what information we've gathered
+    const step = discoveryStep.current;
+
+    // Update context based on step
+    if (step === 1) {
+      setConversationContext({ ...conversationContext, projectIdea: userInput });
+    } else if (step === 2) {
+      setConversationContext({ ...conversationContext, targetUsers: userInput });
+    } else if (step === 3) {
+      setConversationContext({ ...conversationContext, mainFeatures: userInput });
+    } else if (step === 4) {
+      setConversationContext({ ...conversationContext, competitors: userInput });
+    } else if (step === 5) {
+      setConversationContext({ ...conversationContext, differentiator: userInput });
+    }
+
+    // Send to AI and check if discovery is complete
+    await sendToAI(userInput, async (fullResponse) => {
+      // Check if AI suggests generating DISCOVERY.xml
+      const lowerResponse = fullResponse.toLowerCase();
+      if (lowerResponse.includes('discovery.xml') || lowerResponse.includes('generate') || lowerResponse.includes('ready to create')) {
+        // Discovery complete, offer to generate file
+        setTimeout(() => {
+          addSystemMessage(
+            "Ready to generate the discovery document?",
+            [
+              { label: 'Generate DISCOVERY.xml', action: () => generateDiscoveryWithAI(), variant: 'primary' },
+              { label: 'Continue Discussion', action: () => {}, variant: 'secondary' },
+            ]
+          );
+        }, 500);
+      }
+    });
+
+    // Increment step after each answer
+    if (step < 5) {
+      discoveryStep.current = step + 1;
+    }
+  };
+
+  // Generate discovery file with AI
+  const generateDiscoveryWithAI = async () => {
+    addAssistantMessage("⏳ Generating DISCOVERY.xml with AI...", undefined, true);
+
+    const projectPath = currentProject?.path || '';
+    const context = {
+      projectName: currentProject?.name || 'Project',
+      projectIdea: conversationContext.projectIdea || '',
+      targetUsers: conversationContext.targetUsers || '',
+      mainFeatures: conversationContext.mainFeatures || '',
+      competitors: conversationContext.competitors || '',
+      differentiator: conversationContext.differentiator || '',
+    };
+
+    try {
+      if (isAIMode) {
+        // AI-generated content
+        const msgId = startStreamingMessage();
+        let content = '';
+
+        await aiWorkflowService.generateFile('discovery', context, {
+          onChunk: (chunk) => {
+            content += chunk;
+            updateStreamingMessage(msgId, `Generating...\n\n\`\`\`xml\n${content.substring(0, 500)}${content.length > 500 ? '...' : ''}\n\`\`\``);
+          },
+          onComplete: async (fullContent) => {
+            // Write the file
+            if (window.electron) {
+              await window.electron.file.write(`${projectPath}/DISCOVERY.xml`, fullContent);
+            }
+            completeStreamingMessage(msgId);
+            completePhase('discovery', `${projectPath}/DISCOVERY.xml`);
+            addAssistantMessage(
+              `✅ **DISCOVERY.xml generated!**\n\n📁 ${projectPath}/DISCOVERY.xml\n\n**Next step: Specifications**`,
+              [
+                { label: 'Generate Specs', action: () => startSpecificationsWithAI(), variant: 'primary' },
+                { label: 'View File', action: () => viewFile(`${projectPath}/DISCOVERY.xml`), variant: 'secondary' },
+              ],
+              true
+            );
+          },
+          onError: (error) => {
+            updateStreamingMessage(msgId, `❌ Error: ${error}`);
+            completeStreamingMessage(msgId);
+          },
+        });
+      } else {
+        // Template-based generation
+        const result = await fileGenerationService.generateDiscovery(projectPath, context);
+        if (result.success) {
+          completePhase('discovery', result.path);
+          addAssistantMessage(
+            `✅ **DISCOVERY.xml generated!**\n\n📁 ${result.path}\n\n**Next step: Specifications**`,
+            [
+              { label: 'Generate Specs', action: () => startSpecifications(), variant: 'primary' },
+              { label: 'View File', action: () => viewFile(result.path), variant: 'secondary' },
+            ]
+          );
+        }
+      }
+    } catch (error) {
+      addAssistantMessage(`❌ Error generating file: ${error}`, undefined, true);
+    }
+  };
+
+  // Start specifications with AI
+  const startSpecificationsWithAI = async () => {
+    setPhase('specifications');
+    // Convert conversation context to simple key-value pairs
+    const contextForAI: Record<string, string> = {
+      projectName: currentProject?.name || 'Project',
+      projectIdea: conversationContext.projectIdea || '',
+      targetUsers: conversationContext.targetUsers || '',
+      mainFeatures: conversationContext.mainFeatures || '',
+      competitors: conversationContext.competitors || '',
+      differentiator: conversationContext.differentiator || '',
+    };
+    aiWorkflowService.startPhase('specifications', contextForAI);
+
+    if (isAIMode) {
+      addAssistantMessage("📋 **Specifications Phase**\n\nLet me analyze your discovery and create detailed specifications...", undefined, true);
+      await sendToAI("Based on the discovery we just completed, help me create specifications. What user stories and requirements should we define?");
+    } else {
+      startSpecifications();
     }
   };
 

@@ -11,3 +11,9 @@ export {
   type DesignContext,
   type ArchitectureContext,
 } from './fileGenerationService';
+export {
+  aiWorkflowService,
+  type WorkflowPhase,
+  type AIMessage,
+  type StreamCallbacks,
+} from './aiWorkflowService';

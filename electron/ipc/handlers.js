@@ -160,6 +160,46 @@ function setupIpcHandlers(mainWindow) {
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_STOP, async () => {
         return claudeBridge?.stop() ?? false;
     });
+    // Track current query bridge for cancellation
+    let queryBridge = null;
+    // Claude query (one-shot for conversational AI)
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_QUERY, async (_event, projectPath, prompt, systemPrompt) => {
+        // Validate project path
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied: path outside allowed directories' };
+        }
+        // Cancel any existing query
+        if (queryBridge) {
+            queryBridge.cancelQuery();
+            queryBridge = null;
+        }
+        // Create bridge for this query
+        queryBridge = new bridge_1.ClaudeBridge({ projectPath });
+        try {
+            const result = await queryBridge.query({
+                prompt,
+                systemPrompt,
+                timeout: 120000,
+                onChunk: (chunk) => {
+                    mainWindow.webContents.send(channels_1.IPC_CHANNELS.CLAUDE_QUERY_CHUNK, chunk);
+                },
+            });
+            queryBridge = null;
+            return result;
+        }
+        catch (error) {
+            queryBridge = null;
+            return { success: false, error: sanitizeError(error) };
+        }
+    });
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_QUERY_CANCEL, async () => {
+        if (queryBridge) {
+            const result = queryBridge.cancelQuery();
+            queryBridge = null;
+            return result;
+        }
+        return false;
+    });
     // File operations with path validation
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_READ, async (_event, filePath) => {
         if (!isPathAllowed(filePath, allowedProjectPaths)) {

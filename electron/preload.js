@@ -9,6 +9,8 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         pause: () => electron_1.ipcRenderer.invoke('claude:pause'),
         resume: () => electron_1.ipcRenderer.invoke('claude:resume'),
         stop: () => electron_1.ipcRenderer.invoke('claude:stop'),
+        query: (projectPath, prompt, systemPrompt) => electron_1.ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt),
+        queryCancel: () => electron_1.ipcRenderer.invoke('claude:query:cancel'),
         authStatus: () => electron_1.ipcRenderer.invoke('claude:auth:status'),
         authLogin: () => electron_1.ipcRenderer.invoke('claude:auth:login'),
         onOutput: (callback) => {
@@ -30,6 +32,11 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
             const handler = (_event, ...args) => callback(...args);
             electron_1.ipcRenderer.on('claude:status', handler);
             return () => electron_1.ipcRenderer.removeListener('claude:status', handler);
+        },
+        onQueryChunk: (callback) => {
+            const handler = (_event, ...args) => callback(...args);
+            electron_1.ipcRenderer.on('claude:query:chunk', handler);
+            return () => electron_1.ipcRenderer.removeListener('claude:query:chunk', handler);
         },
     },
     // File operations

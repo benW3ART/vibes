@@ -9,6 +9,8 @@ exports.IPC_CHANNELS = {
     CLAUDE_PAUSE: 'claude:pause',
     CLAUDE_RESUME: 'claude:resume',
     CLAUDE_STOP: 'claude:stop',
+    CLAUDE_QUERY: 'claude:query',
+    CLAUDE_QUERY_CANCEL: 'claude:query:cancel',
     CLAUDE_AUTH_STATUS: 'claude:auth:status',
     CLAUDE_AUTH_LOGIN: 'claude:auth:login',
     // Renderer -> Main: File operations
@@ -43,6 +45,7 @@ exports.IPC_CHANNELS = {
     CLAUDE_ERROR: 'claude:error',
     CLAUDE_EXIT: 'claude:exit',
     CLAUDE_STATUS: 'claude:status',
+    CLAUDE_QUERY_CHUNK: 'claude:query:chunk',
     FILE_CHANGED: 'file:changed',
     MCP_OUTPUT: 'mcp:output',
     SHELL_OUTPUT: 'shell:output',

@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('electron', {
     pause: () => ipcRenderer.invoke('claude:pause'),
     resume: () => ipcRenderer.invoke('claude:resume'),
     stop: () => ipcRenderer.invoke('claude:stop'),
+    query: (projectPath: string, prompt: string, systemPrompt?: string) =>
+      ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt),
+    queryCancel: () => ipcRenderer.invoke('claude:query:cancel'),
     authStatus: () => ipcRenderer.invoke('claude:auth:status'),
     authLogin: () => ipcRenderer.invoke('claude:auth:login'),
     onOutput: (callback: Listener) => {
@@ -31,6 +34,11 @@ contextBridge.exposeInMainWorld('electron', {
       const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
       ipcRenderer.on('claude:status', handler);
       return () => ipcRenderer.removeListener('claude:status', handler);
+    },
+    onQueryChunk: (callback: Listener) => {
+      const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
+      ipcRenderer.on('claude:query:chunk', handler);
+      return () => ipcRenderer.removeListener('claude:query:chunk', handler);
     },
   },
 
