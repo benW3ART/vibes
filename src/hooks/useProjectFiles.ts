@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/utils/logger';
 
 interface FileEntry {
   name: string;
@@ -72,14 +73,14 @@ export function useProjectFiles(projectPath?: string, options: UseProjectFilesOp
         await window.electron.file.watch(projectPath);
 
         const unsub = window.electron.file.onChanged((changedPath: unknown) => {
-          console.log('[useProjectFiles] File changed:', changedPath);
+          logger.debug('[useProjectFiles] File changed:', changedPath);
           // Reload files when changes detected
           loadFiles();
         });
 
         unsubscribeRef.current = unsub;
       } catch (err) {
-        console.error('[useProjectFiles] Failed to setup watcher:', err);
+        logger.error('[useProjectFiles] Failed to setup watcher:', err);
       }
     };
 
@@ -108,7 +109,7 @@ export function useProjectFiles(projectPath?: string, options: UseProjectFilesOp
       const content = await window.electron.file.read(filePath);
       return content;
     } catch (err) {
-      console.error('[useProjectFiles] Failed to read file:', err);
+      logger.error('[useProjectFiles] Failed to read file:', err);
       return null;
     }
   }, []);
@@ -124,7 +125,7 @@ export function useProjectFiles(projectPath?: string, options: UseProjectFilesOp
       }
       return success;
     } catch (err) {
-      console.error('[useProjectFiles] Failed to write file:', err);
+      logger.error('[useProjectFiles] Failed to write file:', err);
       return false;
     }
   }, [loadFiles]);
@@ -150,7 +151,7 @@ export function useProjectFiles(projectPath?: string, options: UseProjectFilesOp
       }
       return result.success;
     } catch (err) {
-      console.error('[useProjectFiles] Failed to create directory:', err);
+      logger.error('[useProjectFiles] Failed to create directory:', err);
       return false;
     }
   }, [loadFiles]);
@@ -204,7 +205,7 @@ export function useProjectArtifacts(projectPath?: string) {
         progress: checks[5],
       });
     } catch (err) {
-      console.error('[useProjectArtifacts] Failed to check artifacts:', err);
+      logger.error('[useProjectArtifacts] Failed to check artifacts:', err);
     } finally {
       setIsLoading(false);
     }

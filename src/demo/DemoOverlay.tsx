@@ -69,22 +69,22 @@ export function DemoOverlay({
         </h1>
 
         <p className={styles.description}>
-          Votre IDE visuel propulsé par Claude. Je vous guide de l'idée à la production :
+          Your visual IDE powered by Claude. I guide you from idea to production:
           Discovery → Specs → Design → Architecture → Build.
         </p>
 
         <div className={styles.features}>
           <div className={styles.feature}>
             <span className={styles.featureIcon}>💡</span>
-            <span className={styles.featureText}>Interview guidée</span>
+            <span className={styles.featureText}>Guided interview</span>
           </div>
           <div className={styles.feature}>
             <span className={styles.featureIcon}>🤖</span>
-            <span className={styles.featureText}>Construction automatique</span>
+            <span className={styles.featureText}>Automatic building</span>
           </div>
           <div className={styles.feature}>
             <span className={styles.featureIcon}>⚡</span>
-            <span className={styles.featureText}>Zéro config</span>
+            <span className={styles.featureText}>Zero config</span>
           </div>
         </div>
 
@@ -93,13 +93,13 @@ export function DemoOverlay({
             className={styles.primaryButton}
             onClick={handleSkipTutorial}
           >
-            Commencer mon projet
+            Start my project
           </button>
           <button
             className={styles.secondaryButton}
             onClick={handleExploreDemo}
           >
-            Voir la démo
+            View the demo
           </button>
         </div>
 

@@ -17,7 +17,7 @@ interface DisplayMessage {
 }
 
 export function AssistantGuide() {
-  const { chatPanelOpen, toggleChatPanel, setChatPanelOpen } = useNavigationStore();
+  const { chatPanelOpen, toggleChatPanel, setChatPanelOpen, toggleXrayPanel } = useNavigationStore();
   const { currentProject, setCurrentProject } = useProjectStore();
   const { currentPhase, setPhase, completePhase, setConversationContext, conversationContext } = useWorkflowStore();
   const { isClaudeConnected } = useConnectionsStore();
@@ -74,19 +74,19 @@ export function AssistantGuide() {
     if (!currentProject) {
       // No project - show welcome
       addSystemMessage(
-        "👋 **Bienvenue sur vibes !**\n\nJe suis votre assistant IA et je vais vous guider à travers toutes les étapes de création de votre projet :\n\n1. 💡 **Discovery** - Comprendre votre idée\n2. 📋 **Specs** - Définir les fonctionnalités\n3. 🎨 **Design** - Créer l'identité visuelle\n4. 🏗️ **Architecture** - Planifier la technique\n5. ⚡ **Execution** - Construire le projet\n\nPour commencer, choisissez une option :",
+        "👋 **Welcome to vibes!**\n\nI'm your AI assistant and I'll guide you through all the stages of creating your project:\n\n1. 💡 **Discovery** - Understand your idea\n2. 📋 **Specs** - Define the features\n3. 🎨 **Design** - Create the visual identity\n4. 🏗️ **Architecture** - Plan the technical stack\n5. ⚡ **Execution** - Build the project\n\nTo get started, choose an option:",
         [
-          { label: '+ Nouveau Projet', action: handleNewProject, variant: 'primary' },
-          { label: '📂 Ouvrir Projet', action: handleOpenProject, variant: 'secondary' },
+          { label: '+ New Project', action: handleNewProject, variant: 'primary' },
+          { label: '📂 Open Project', action: handleOpenProject, variant: 'secondary' },
         ]
       );
     } else {
       // Has project - resume workflow
       addSystemMessage(
-        `👋 **Bon retour !**\n\nVous travaillez sur **${currentProject.name}**\n\nPhase actuelle : ${phaseDisplayInfo[currentPhase].icon} **${phaseDisplayInfo[currentPhase].label}**`,
+        `👋 **Welcome back!**\n\nYou're working on **${currentProject.name}**\n\nCurrent phase: ${phaseDisplayInfo[currentPhase].icon} **${phaseDisplayInfo[currentPhase].label}**`,
         [
-          { label: 'Continuer', action: () => resumeWorkflow(), variant: 'primary' },
-          { label: 'Recommencer', action: () => resetWorkflow(), variant: 'secondary' },
+          { label: 'Continue', action: () => resumeWorkflow(), variant: 'primary' },
+          { label: 'Start Over', action: () => resetWorkflow(), variant: 'secondary' },
         ]
       );
     }
@@ -131,15 +131,15 @@ export function AssistantGuide() {
   const handleNewProject = async () => {
     setPhase('discovery');
     addAssistantMessage(
-      "🚀 **Créons votre nouveau projet !**\n\nComment voulez-vous l'appeler ?\n\n*(Entrez un nom comme \"mon-super-projet\" ou \"SaaS-client\")*"
+      "🚀 **Let's create your new project!**\n\nWhat would you like to call it?\n\n*(Enter a name like \"my-awesome-project\" or \"SaaS-client\")*"
     );
   };
 
   const handleOpenProject = async () => {
     if (!window.electron) {
       addAssistantMessage(
-        "⚠️ L'ouverture de projet nécessite l'app desktop.\n\nEn mode navigateur, vous pouvez créer un nouveau projet pour tester.",
-        [{ label: '+ Nouveau Projet', action: handleNewProject, variant: 'primary' }]
+        "⚠️ Opening a project requires the desktop app.\n\nIn browser mode, you can create a new project to test.",
+        [{ label: '+ New Project', action: handleNewProject, variant: 'primary' }]
       );
       return;
     }
@@ -161,10 +161,10 @@ export function AssistantGuide() {
       await claudeService.init(path);
 
       addAssistantMessage(
-        `📂 **Projet ouvert : ${projectName}**\n\nJe vais analyser la structure du projet...`,
+        `📂 **Project opened: ${projectName}**\n\nI'll analyze the project structure...`,
         [
-          { label: 'Commencer Discovery', action: () => startDiscovery(), variant: 'primary' },
-          { label: 'Voir les fichiers', action: () => {}, variant: 'secondary' },
+          { label: 'Start Discovery', action: () => startDiscovery(), variant: 'primary' },
+          { label: 'View Files', action: () => toggleXrayPanel(), variant: 'secondary' },
         ]
       );
     }
@@ -185,7 +185,7 @@ export function AssistantGuide() {
       await claudeService.init(project.path);
 
       addAssistantMessage(
-        `✅ **Projet "${name}" créé !** (mode démo)\n\nMaintenant, parlons de votre idée.\n\n**Question 1/5 : Décrivez votre projet en une phrase.**\n\n*Exemple : "Une app de gestion de tâches collaborative pour équipes distantes"*`
+        `✅ **Project "${name}" created!** (demo mode)\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A collaborative task management app for remote teams"*`
       );
       discoveryStep.current = 1;
       return;
@@ -193,13 +193,13 @@ export function AssistantGuide() {
 
     // Electron mode - ask for directory
     addAssistantMessage(
-      `📁 **Sélectionnez le dossier** où créer "${name}"\n\n*(Le projet sera créé dans un sous-dossier)*`,
+      `📁 **Select the folder** where to create "${name}"\n\n*(The project will be created in a subfolder)*`,
       [{
-        label: 'Choisir dossier',
+        label: 'Choose folder',
         action: async () => {
           const basePath = await window.electron.dialog.openDirectory();
           if (basePath) {
-            addAssistantMessage("⏳ Création du projet en cours...");
+            addAssistantMessage("⏳ Creating project...");
 
             const result = await window.electron.project.create(name, basePath);
             if (result.success && result.path) {
@@ -215,13 +215,13 @@ export function AssistantGuide() {
               await claudeService.init(result.path);
 
               addAssistantMessage(
-                `✅ **Projet "${name}" créé !**\n\n📁 ${result.path}\n\nStructure Genius Team initialisée :\n- .claude/ (config & skills)\n- .genius/ (état)\n- CLAUDE.md\n\nMaintenant, parlons de votre idée.\n\n**Question 1/5 : Décrivez votre projet en une phrase.**\n\n*Exemple : "Une app de gestion de tâches pour équipes distantes"*`
+                `✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nGenius Team structure initialized:\n- .claude/ (config & skills)\n- .genius/ (state)\n- CLAUDE.md\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A task management app for remote teams"*`
               );
               discoveryStep.current = 1;
             } else {
               addAssistantMessage(
-                `❌ **Erreur** : ${result.error}\n\nVoulez-vous réessayer ?`,
-                [{ label: 'Réessayer', action: () => createProject(name), variant: 'primary' }]
+                `❌ **Error**: ${result.error}\n\nWould you like to try again?`,
+                [{ label: 'Retry', action: () => createProject(name), variant: 'primary' }]
               );
             }
           }
@@ -235,7 +235,7 @@ export function AssistantGuide() {
     setPhase('discovery');
     discoveryStep.current = 1;
     addAssistantMessage(
-      "💡 **Phase Discovery**\n\nJe vais vous poser 5 questions pour bien comprendre votre projet.\n\n**Question 1/5 : Décrivez votre projet en une phrase.**\n\n*Exemple : \"Une marketplace de services freelance spécialisée tech\"*"
+      "💡 **Discovery Phase**\n\nI'll ask you 5 questions to better understand your project.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: \"A tech-focused freelance services marketplace\"*"
     );
   };
 
@@ -250,7 +250,7 @@ export function AssistantGuide() {
         contextUpdate.projectIdea = answer;
         setConversationContext({ projectIdea: answer });
         addAssistantMessage(
-          `📝 Noté : "${answer.substring(0, 100)}${answer.length > 100 ? '...' : ''}"\n\n**Question 2/5 : Qui sont vos utilisateurs cibles ?**\n\n*Décrivez votre persona principal (âge, métier, besoins)*`
+          `📝 Noted: "${answer.substring(0, 100)}${answer.length > 100 ? '...' : ''}"\n\n**Question 2/5: Who are your target users?**\n\n*Describe your main persona (age, job, needs)*`
         );
         discoveryStep.current = 2;
         break;
@@ -258,7 +258,7 @@ export function AssistantGuide() {
       case 2:
         setConversationContext({ ...conversationContext, targetUsers: answer });
         addAssistantMessage(
-          `👥 Utilisateurs identifiés !\n\n**Question 3/5 : Quelles sont les 3 fonctionnalités principales ?**\n\n*Listez les features MVP essentielles*`
+          `👥 Users identified!\n\n**Question 3/5: What are the 3 main features?**\n\n*List the essential MVP features*`
         );
         discoveryStep.current = 3;
         break;
@@ -266,7 +266,7 @@ export function AssistantGuide() {
       case 3:
         setConversationContext({ ...conversationContext, mainFeatures: answer });
         addAssistantMessage(
-          `✨ Fonctionnalités notées !\n\n**Question 4/5 : Avez-vous des concurrents directs ?**\n\n*Nommez 2-3 solutions similaires si elles existent*`
+          `✨ Features noted!\n\n**Question 4/5: Do you have direct competitors?**\n\n*Name 2-3 similar solutions if they exist*`
         );
         discoveryStep.current = 4;
         break;
@@ -274,7 +274,7 @@ export function AssistantGuide() {
       case 4:
         setConversationContext({ ...conversationContext, competitors: answer });
         addAssistantMessage(
-          `🎯 Analyse concurrentielle notée !\n\n**Question 5/5 : Quel est votre différenciateur principal ?**\n\n*Qu'est-ce qui rend votre solution unique ?*`
+          `🎯 Competitive analysis noted!\n\n**Question 5/5: What is your main differentiator?**\n\n*What makes your solution unique?*`
         );
         discoveryStep.current = 5;
         break;
@@ -284,7 +284,7 @@ export function AssistantGuide() {
 
         // Discovery complete - generate DISCOVERY.xml
         addAssistantMessage(
-          `🎉 **Discovery complète !**\n\nJe vais maintenant générer le fichier DISCOVERY.xml avec toutes ces informations.\n\n⏳ Génération en cours...`
+          `🎉 **Discovery complete!**\n\nI'll now generate the DISCOVERY.xml file with all this information.\n\n⏳ Generating...`
         );
 
         // Generate real DISCOVERY.xml file
@@ -303,16 +303,16 @@ export function AssistantGuide() {
         if (discoveryResult.success) {
           completePhase('discovery', discoveryResult.path);
           addAssistantMessage(
-            `✅ **DISCOVERY.xml généré !**\n\n📁 ${discoveryResult.path}\n\nRésumé :\n- 💡 Idée : ${conversationContext.projectIdea?.substring(0, 50)}...\n- 👥 Cible : Définie\n- ⚡ Features : Identifiées\n- 🎯 Différenciateur : Clair\n\n**Prochaine étape : Spécifications**`,
+            `✅ **DISCOVERY.xml generated!**\n\n📁 ${discoveryResult.path}\n\nSummary:\n- 💡 Idea: ${conversationContext.projectIdea?.substring(0, 50)}...\n- 👥 Target: Defined\n- ⚡ Features: Identified\n- 🎯 Differentiator: Clear\n\n**Next step: Specifications**`,
             [
-              { label: 'Générer Specs', action: () => startSpecifications(), variant: 'primary' },
-              { label: 'Modifier Discovery', action: () => { discoveryStep.current = 1; }, variant: 'secondary' },
+              { label: 'Generate Specs', action: () => startSpecifications(), variant: 'primary' },
+              { label: 'Edit Discovery', action: () => { discoveryStep.current = 1; }, variant: 'secondary' },
             ]
           );
         } else {
           addAssistantMessage(
-            `❌ Erreur lors de la génération de DISCOVERY.xml.\n\nVoulez-vous réessayer ?`,
-            [{ label: 'Réessayer', action: () => handleDiscoveryAnswer(answer), variant: 'primary' }]
+            `❌ Error generating DISCOVERY.xml.\n\nWould you like to try again?`,
+            [{ label: 'Retry', action: () => handleDiscoveryAnswer(answer), variant: 'primary' }]
           );
         }
         break;
@@ -322,7 +322,7 @@ export function AssistantGuide() {
   const startSpecifications = async () => {
     setPhase('specifications');
     addAssistantMessage(
-      `📋 **Phase Spécifications**\n\nJe génère les specs basées sur votre discovery...\n\n⏳ Création des user stories et critères d'acceptation...`
+      `📋 **Specifications Phase**\n\nGenerating specs based on your discovery...\n\n⏳ Creating user stories and acceptance criteria...`
     );
 
     const projectPath = currentProject?.path || '';
@@ -340,16 +340,16 @@ export function AssistantGuide() {
 
     if (specsResult.success) {
       addAssistantMessage(
-        `✅ **SPECIFICATIONS.xml généré !**\n\n📁 ${specsResult.path}\n\nContenu :\n- 📖 User Stories générées\n- ✓ Critères d'acceptation\n- 📊 Modèle de données\n\n**Voulez-vous valider ces specs ?**`,
+        `✅ **SPECIFICATIONS.xml generated!**\n\n📁 ${specsResult.path}\n\nContents:\n- 📖 User Stories generated\n- ✓ Acceptance criteria\n- 📊 Data model\n\n**Would you like to validate these specs?**`,
         [
-          { label: '✓ Approuver', action: () => approveSpecs(specsResult.path), variant: 'primary' },
-          { label: 'Voir fichier', action: () => viewFile(specsResult.path), variant: 'secondary' },
+          { label: '✓ Approve', action: () => approveSpecs(specsResult.path), variant: 'primary' },
+          { label: 'View file', action: () => viewFile(specsResult.path), variant: 'secondary' },
         ]
       );
     } else {
       addAssistantMessage(
-        `❌ Erreur lors de la génération des specs.\n\nVoulez-vous réessayer ?`,
-        [{ label: 'Réessayer', action: () => startSpecifications(), variant: 'primary' }]
+        `❌ Error generating specs.\n\nWould you like to try again?`,
+        [{ label: 'Retry', action: () => startSpecifications(), variant: 'primary' }]
       );
     }
   };
@@ -358,21 +358,21 @@ export function AssistantGuide() {
     if (window.electron) {
       try {
         const content = await window.electron.file.read(filePath);
-        addAssistantMessage(`📄 **Contenu de ${filePath.split('/').pop()}:**\n\n\`\`\`xml\n${content.substring(0, 1000)}${content.length > 1000 ? '\n...(tronqué)' : ''}\n\`\`\``);
+        addAssistantMessage(`📄 **Contents of ${filePath.split('/').pop()}:**\n\n\`\`\`xml\n${content.substring(0, 1000)}${content.length > 1000 ? '\n...(truncated)' : ''}\n\`\`\``);
       } catch {
-        addAssistantMessage(`❌ Impossible de lire le fichier.`);
+        addAssistantMessage(`❌ Unable to read the file.`);
       }
     } else {
-      addAssistantMessage(`📄 Fichier disponible à : ${filePath}`);
+      addAssistantMessage(`📄 File available at: ${filePath}`);
     }
   };
 
   const approveSpecs = (specsPath: string) => {
     completePhase('specifications', specsPath);
     addAssistantMessage(
-      `✅ **Specs approuvées !**\n\n**Prochaine étape : Design System**\n\nJe vais créer 3 options de design avec :\n- Palette de couleurs\n- Typographie\n- Composants UI\n\nPrêt à voir les designs ?`,
+      `✅ **Specs approved!**\n\n**Next step: Design System**\n\nI'll create 3 design options with:\n- Color palette\n- Typography\n- UI Components\n\nReady to see the designs?`,
       [
-        { label: '🎨 Voir les options', action: () => startDesign(specsPath), variant: 'primary' },
+        { label: '🎨 View options', action: () => startDesign(specsPath), variant: 'primary' },
       ]
     );
   };
@@ -380,7 +380,7 @@ export function AssistantGuide() {
   const startDesign = async (specsPath: string) => {
     setPhase('design');
     addAssistantMessage(
-      `🎨 **Phase Design**\n\nVoici 3 options de design pour votre projet :\n\n**Option A - "Minimal"**\n🎨 Noir/Blanc, épuré, moderne\n- Primary: #000000\n- Background: #FFFFFF\n\n**Option B - "Vibrant"**\n🌈 Couleurs vives, énergique\n- Primary: #FF6B35\n- Background: #1A1A2E\n\n**Option C - "Professional"**\n💼 Bleu/Gris, corporate, fiable\n- Primary: #2563EB\n- Background: #F8FAFC\n\n**Quelle option préférez-vous ?**`,
+      `🎨 **Design Phase**\n\nHere are 3 design options for your project:\n\n**Option A - "Minimal"**\n🎨 Black/White, clean, modern\n- Primary: #000000\n- Background: #FFFFFF\n\n**Option B - "Vibrant"**\n🌈 Bright colors, energetic\n- Primary: #FF6B35\n- Background: #1A1A2E\n\n**Option C - "Professional"**\n💼 Blue/Gray, corporate, reliable\n- Primary: #2563EB\n- Background: #F8FAFC\n\n**Which option do you prefer?**`,
       [
         { label: 'Option A', action: () => chooseDesign('A', specsPath), variant: 'secondary' },
         { label: 'Option B', action: () => chooseDesign('B', specsPath), variant: 'secondary' },
@@ -390,7 +390,7 @@ export function AssistantGuide() {
   };
 
   const chooseDesign = async (option: 'A' | 'B' | 'C', specsPath: string) => {
-    addAssistantMessage(`⏳ Génération du design system avec l'option ${option}...`);
+    addAssistantMessage(`⏳ Generating design system with option ${option}...`);
 
     const projectPath = currentProject?.path || '';
     const designContext = {
@@ -412,15 +412,15 @@ export function AssistantGuide() {
       setConversationContext({ ...conversationContext, designChoice: option });
 
       addAssistantMessage(
-        `✅ **Option ${option} sélectionnée !**\n\n📁 ${designResult.path}\n\n**Prochaine étape : Architecture Technique**\n\nJe vais analyser vos specs et générer :\n- ARCHITECTURE.md (décisions techniques)\n- .claude/plan.md (tâches d'exécution)`,
+        `✅ **Option ${option} selected!**\n\n📁 ${designResult.path}\n\n**Next step: Technical Architecture**\n\nI'll analyze your specs and generate:\n- ARCHITECTURE.md (technical decisions)\n- .claude/plan.md (execution tasks)`,
         [
-          { label: '🏗️ Générer Architecture', action: () => startArchitecture(specsPath, designResult.path), variant: 'primary' },
+          { label: '🏗️ Generate Architecture', action: () => startArchitecture(specsPath, designResult.path), variant: 'primary' },
         ]
       );
     } else {
       addAssistantMessage(
-        `❌ Erreur lors de la génération du design.\n\nVoulez-vous réessayer ?`,
-        [{ label: 'Réessayer', action: () => chooseDesign(option, specsPath), variant: 'primary' }]
+        `❌ Error generating design.\n\nWould you like to try again?`,
+        [{ label: 'Retry', action: () => chooseDesign(option, specsPath), variant: 'primary' }]
       );
     }
   };
@@ -428,7 +428,7 @@ export function AssistantGuide() {
   const startArchitecture = async (specsPath: string, designPath: string) => {
     setPhase('architecture');
     addAssistantMessage(
-      `🏗️ **Phase Architecture**\n\nAnalyse des requirements et génération du plan technique...\n\n⏳ Création de ARCHITECTURE.md et plan.md...`
+      `🏗️ **Architecture Phase**\n\nAnalyzing requirements and generating technical plan...\n\n⏳ Creating ARCHITECTURE.md and plan.md...`
     );
 
     const projectPath = currentProject?.path || '';
@@ -454,16 +454,16 @@ export function AssistantGuide() {
       const taskCount = 15 + featureCount + 10; // Setup + features + polish
 
       addAssistantMessage(
-        `✅ **Architecture générée !**\n\n📁 Fichiers créés :\n- ${archResult.paths[0]}\n- ${archResult.paths[1]}\n\n**Stack recommandée :**\n- ⚛️ Next.js 14 (App Router)\n- 🗄️ Supabase (Auth + DB)\n- 🎨 Tailwind CSS\n- 📦 TypeScript\n\n**Plan d'exécution :**\n- ${taskCount} tâches identifiées\n\n**Prêt à lancer la construction ?**`,
+        `✅ **Architecture generated!**\n\n📁 Files created:\n- ${archResult.paths[0]}\n- ${archResult.paths[1]}\n\n**Recommended stack:**\n- ⚛️ Next.js 14 (App Router)\n- 🗄️ Supabase (Auth + DB)\n- 🎨 Tailwind CSS\n- 📦 TypeScript\n\n**Execution plan:**\n- ${taskCount} tasks identified\n\n**Ready to start building?**`,
         [
-          { label: '⚡ Lancer Build', action: () => startExecution(), variant: 'primary' },
-          { label: 'Voir le plan', action: () => viewFile(archResult.paths[1]), variant: 'secondary' },
+          { label: '⚡ Start Build', action: () => startExecution(), variant: 'primary' },
+          { label: 'View plan', action: () => viewFile(archResult.paths[1]), variant: 'secondary' },
         ]
       );
     } else {
       addAssistantMessage(
-        `❌ Erreur lors de la génération de l'architecture.\n\nVoulez-vous réessayer ?`,
-        [{ label: 'Réessayer', action: () => startArchitecture(specsPath, designPath), variant: 'primary' }]
+        `❌ Error generating architecture.\n\nWould you like to try again?`,
+        [{ label: 'Retry', action: () => startArchitecture(specsPath, designPath), variant: 'primary' }]
       );
     }
   };
@@ -480,16 +480,16 @@ export function AssistantGuide() {
     // Check if Claude is connected
     if (!isClaudeConnected()) {
       addAssistantMessage(
-        `⚠️ **Claude non connecté**\n\nPour lancer la construction, vous devez d'abord connecter Claude.\n\nAllez dans **Connections** pour configurer Claude.`,
+        `⚠️ **Claude not connected**\n\nTo start building, you must first connect Claude.\n\nGo to **Connections** to configure Claude.`,
         [
-          { label: 'Configurer Claude', action: navigateToConnections, variant: 'primary' },
+          { label: 'Configure Claude', action: navigateToConnections, variant: 'primary' },
         ]
       );
       return;
     }
 
     addAssistantMessage(
-      `⚡ **Phase Execution**\n\n🚀 Lancement de Claude Code...\n\nJe vais maintenant construire votre projet automatiquement. Vous pouvez suivre la progression en temps réel.`
+      `⚡ **Execution Phase**\n\n🚀 Launching Claude Code...\n\nI'll now build your project automatically. You can follow the progress in real-time.`
     );
 
     // Start Claude
@@ -499,13 +499,13 @@ export function AssistantGuide() {
       await claudeService.send('/continue');
 
       addAssistantMessage(
-        `✅ **Claude lancé !**\n\nConstruction en cours...\n\n📊 Suivez la progression dans le panneau Execution.`
+        `✅ **Claude started!**\n\nBuilding in progress...\n\n📊 Follow the progress in the Execution panel.`
       );
     } else {
       addAssistantMessage(
-        `❌ **Erreur de lancement**\n\nImpossible de démarrer Claude. Vérifiez que Claude Code CLI est installé.`,
+        `❌ **Launch error**\n\nUnable to start Claude. Verify that Claude Code CLI is installed.`,
         [
-          { label: 'Réessayer', action: () => startExecution(), variant: 'primary' },
+          { label: 'Retry', action: () => startExecution(), variant: 'primary' },
         ]
       );
     }
@@ -646,10 +646,10 @@ export function AssistantGuide() {
           className="chat-input"
           placeholder={
             currentPhase === 'discovery' && !currentProject
-              ? "Entrez le nom du projet..."
+              ? "Enter project name..."
               : currentPhase === 'discovery' && discoveryStep.current > 0
-              ? "Votre réponse..."
-              : "Écrivez votre message..."
+              ? "Your answer..."
+              : "Type your message..."
           }
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -657,7 +657,7 @@ export function AssistantGuide() {
           rows={2}
         />
         <Button variant="primary" onClick={handleSend} disabled={isTyping}>
-          {isTyping ? '...' : 'Envoyer'}
+          {isTyping ? '...' : 'Send'}
         </Button>
       </div>
     </div>

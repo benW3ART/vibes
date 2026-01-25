@@ -136,7 +136,7 @@ test.describe('Edge Cases', () => {
       await closeOverlays(page);
 
       // Start new project flow
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -157,7 +157,7 @@ test.describe('Edge Cases', () => {
       await page.waitForTimeout(1500);
       await closeOverlays(page);
 
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -308,7 +308,7 @@ test.describe('Edge Cases', () => {
       await page.waitForTimeout(1500);
       await closeOverlays(page);
 
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -328,7 +328,7 @@ test.describe('Edge Cases', () => {
       await page.waitForTimeout(1500);
       await closeOverlays(page);
 
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 

@@ -1,4 +1,5 @@
 // File Generation Service - Generates real project files
+import { logger } from '@/utils/logger';
 
 export interface DiscoveryContext {
   projectName: string;
@@ -427,18 +428,18 @@ function escapeXml(str: string): string {
 class FileGenerationServiceClass {
   async writeFile(projectPath: string, fileName: string, content: string): Promise<boolean> {
     if (!window.electron) {
-      console.log(`[FileGeneration] Demo mode - would write ${fileName}`);
-      console.log(content);
+      logger.debug(`[FileGeneration] Demo mode - would write ${fileName}`);
+      logger.debug(content);
       return true;
     }
 
     try {
       const filePath = `${projectPath}/${fileName}`;
       await window.electron.file.write(filePath, content);
-      console.log(`[FileGeneration] Wrote ${filePath}`);
+      logger.debug(`[FileGeneration] Wrote ${filePath}`);
       return true;
     } catch (error) {
-      console.error(`[FileGeneration] Failed to write ${fileName}:`, error);
+      logger.error(`[FileGeneration] Failed to write ${fileName}:`, error);
       return false;
     }
   }

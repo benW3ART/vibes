@@ -40,7 +40,7 @@ test.describe('Panel Interactions', () => {
       await page.waitForTimeout(500);
 
       // Start a flow that triggers typing
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click();
 
       // Typing indicator may briefly appear

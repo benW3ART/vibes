@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/stores';
 import { StatusDot, Badge } from '@/components/ui';
+import { logger } from '@/utils/logger';
 
 export function ProjectSelector() {
   const { currentProject, recentProjects, setCurrentProject } = useProjectStore();
@@ -55,11 +56,11 @@ export function ProjectSelector() {
 
     // For Electron, let user select directory then create project
     const basePath = await window.electron.dialog.openDirectory();
-    console.log('[ProjectSelector] Selected basePath:', basePath);
+    logger.debug('[ProjectSelector] Selected basePath:', basePath);
     if (basePath) {
-      console.log('[ProjectSelector] Creating project:', newProjectName, 'at', basePath);
+      logger.debug('[ProjectSelector] Creating project:', newProjectName, 'at', basePath);
       const result = await window.electron.project.create(newProjectName, basePath);
-      console.log('[ProjectSelector] Result:', result);
+      logger.debug('[ProjectSelector] Result:', result);
       if (result.success && result.path) {
         setCurrentProject({
           id: Date.now().toString(),

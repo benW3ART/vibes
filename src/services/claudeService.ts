@@ -1,4 +1,5 @@
 // Claude Service - Manages communication with Claude Code CLI
+import { logger } from '@/utils/logger';
 
 export interface ClaudeMessage {
   id: string;
@@ -40,7 +41,7 @@ class ClaudeServiceClass {
     this.projectPath = projectPath;
 
     if (!this.isElectronMode) {
-      console.log('[ClaudeService] Demo mode - no Electron');
+      logger.debug('[ClaudeService] Demo mode - no Electron');
       return true;
     }
 
@@ -65,7 +66,7 @@ class ClaudeServiceClass {
 
     this.unsubscribers.push(
       window.electron.claude.onExit((code) => {
-        console.log('[ClaudeService] Claude exited with code:', code);
+        logger.debug('[ClaudeService] Claude exited with code:', code);
         this.notifyStatusHandlers({ running: false });
       })
     );
@@ -76,12 +77,12 @@ class ClaudeServiceClass {
   // Start Claude process for the project
   async start(): Promise<boolean> {
     if (!this.projectPath) {
-      console.error('[ClaudeService] No project path set');
+      logger.error('[ClaudeService] No project path set');
       return false;
     }
 
     if (!this.isElectronMode) {
-      console.log('[ClaudeService] Demo mode - simulating start');
+      logger.debug('[ClaudeService] Demo mode - simulating start');
       this.notifyStatusHandlers({ running: true });
       return true;
     }
@@ -231,16 +232,16 @@ class ClaudeServiceClass {
     let response = '';
 
     // Simulate different responses based on context
-    if (lowerMessage.includes('bonjour') || lowerMessage.includes('hello') || lowerMessage.includes('salut')) {
-      response = "Bonjour ! Je suis Claude, votre assistant IA. Je vais vous guider dans la création de votre projet. Décrivez-moi votre idée en quelques phrases.";
-    } else if (lowerMessage.includes('projet') || lowerMessage.includes('app') || lowerMessage.includes('application')) {
-      response = "Excellent ! Je comprends mieux votre projet. Laissez-moi vous poser quelques questions pour affiner les spécifications :\n\n1. Qui sont vos utilisateurs cibles ?\n2. Quelles sont les 3 fonctionnalités principales ?\n3. Avez-vous des contraintes techniques particulières ?";
-    } else if (lowerMessage.includes('utilisateur') || lowerMessage.includes('user')) {
-      response = "Parfait, je note ces informations sur vos utilisateurs. Passons aux fonctionnalités principales. Quelles sont les 3-5 features essentielles de votre MVP ?";
-    } else if (lowerMessage.includes('fonction') || lowerMessage.includes('feature')) {
-      response = "Ces fonctionnalités sont claires. Je vais maintenant générer les spécifications détaillées basées sur nos échanges.\n\n📋 **Génération de SPECIFICATIONS.xml en cours...**\n\nUne fois les specs validées, nous passerons au design system.";
+    if (lowerMessage.includes('bonjour') || lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+      response = "Hello! I'm Claude, your AI assistant. I'll guide you through creating your project. Describe your idea in a few sentences.";
+    } else if (lowerMessage.includes('project') || lowerMessage.includes('app') || lowerMessage.includes('application')) {
+      response = "Excellent! I understand your project better. Let me ask you a few questions to refine the specifications:\n\n1. Who are your target users?\n2. What are the 3 main features?\n3. Do you have any specific technical constraints?";
+    } else if (lowerMessage.includes('user') || lowerMessage.includes('customer')) {
+      response = "Great, I've noted this information about your users. Let's move on to the main features. What are the 3-5 essential features for your MVP?";
+    } else if (lowerMessage.includes('feature') || lowerMessage.includes('function')) {
+      response = "These features are clear. I'll now generate detailed specifications based on our discussion.\n\n📋 **Generating SPECIFICATIONS.xml...**\n\nOnce the specs are validated, we'll move on to the design system.";
     } else {
-      response = `J'ai bien compris. "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"\n\nContinuons à définir votre projet. Y a-t-il d'autres aspects que vous souhaitez aborder ?`;
+      response = `I understand. "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"\n\nLet's continue defining your project. Are there other aspects you'd like to discuss?`;
     }
 
     const assistantMessage: ClaudeMessage = {

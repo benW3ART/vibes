@@ -34,14 +34,14 @@ test.describe('AssistantGuide Workflow', () => {
       await page.waitForTimeout(500);
 
       // Should show welcome message
-      const welcomeText = page.locator('.chat-message').filter({ hasText: 'Bienvenue' });
+      const welcomeText = page.locator('.chat-message').filter({ hasText: 'Welcome' });
       await expect(welcomeText).toBeVisible({ timeout: 5000 });
 
       // Should have action buttons
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await expect(newProjectBtn).toBeVisible();
 
-      const openProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Ouvrir Projet' });
+      const openProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Open Project' });
       await expect(openProjectBtn).toBeVisible();
     });
 
@@ -71,8 +71,8 @@ test.describe('AssistantGuide Workflow', () => {
       await page.waitForTimeout(2000);
       await closeAllOverlays(page);
 
-      // Click "Nouveau Projet" button (use force to bypass any overlay)
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      // Click "New Project" button (use force to bypass any overlay)
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await expect(newProjectBtn).toBeVisible({ timeout: 5000 });
       await newProjectBtn.click({ force: true });
 
@@ -91,7 +91,7 @@ test.describe('AssistantGuide Workflow', () => {
       await closeAllOverlays(page);
 
       // Start new project flow
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -114,7 +114,7 @@ test.describe('AssistantGuide Workflow', () => {
       await closeAllOverlays(page);
 
       // Start new project
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -139,7 +139,7 @@ test.describe('AssistantGuide Workflow', () => {
       await closeAllOverlays(page);
 
       // Start new project
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -275,7 +275,7 @@ test.describe('AssistantGuide Workflow', () => {
       await expect(panel).toBeVisible();
 
       // Start interaction to generate messages
-      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'Nouveau Projet' });
+      const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await newProjectBtn.click({ force: true });
       await page.waitForTimeout(2000);
 
