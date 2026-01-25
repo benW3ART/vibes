@@ -47,9 +47,89 @@ const child_process_1 = require("child_process");
 let claudeBridge = null;
 let fileWatcher = null;
 const mcpProcesses = new Map();
+// Track allowed project paths (set when user selects via dialog)
+const allowedProjectPaths = new Set();
+// ============================================
+// Security helpers
+// ============================================
+// Validate project name - only allow safe characters
+function isValidProjectName(name) {
+    // Allow alphanumeric, dash, underscore, max 255 chars
+    return /^[a-zA-Z0-9_-]{1,255}$/.test(name);
+}
+// Validate that a path is within an allowed project directory
+function isPathAllowed(filePath, allowedBases) {
+    const resolved = path.resolve(filePath);
+    // Check for path traversal attempts
+    if (resolved.includes('..') || filePath.includes('\0')) {
+        return false;
+    }
+    // Check if path is within an allowed base
+    for (const base of allowedBases) {
+        const resolvedBase = path.resolve(base);
+        if (resolved.startsWith(resolvedBase + path.sep) || resolved === resolvedBase) {
+            return true;
+        }
+    }
+    return false;
+}
+// Whitelist of allowed shell commands
+const ALLOWED_COMMANDS = {
+    'npm test': [{ cmd: 'npm', args: ['test'] }],
+    'npm run dev': [{ cmd: 'npm', args: ['run', 'dev'] }],
+    'npm run build': [{ cmd: 'npm', args: ['run', 'build'] }],
+    'npm install': [{ cmd: 'npm', args: ['install'] }],
+    'yarn test': [{ cmd: 'yarn', args: ['test'] }],
+    'yarn dev': [{ cmd: 'yarn', args: ['dev'] }],
+    'yarn build': [{ cmd: 'yarn', args: ['build'] }],
+    'vercel': [{ cmd: 'vercel', args: [] }],
+    'vercel --prod': [{ cmd: 'vercel', args: ['--prod'] }],
+    'vercel --yes': [{ cmd: 'vercel', args: ['--yes'] }],
+    'vercel --prod --yes': [{ cmd: 'vercel', args: ['--prod', '--yes'] }],
+    'railway up': [{ cmd: 'railway', args: ['up'] }],
+    'claude --version': [{ cmd: 'claude', args: ['--version'] }],
+    'claude auth status': [{ cmd: 'claude', args: ['auth', 'status'] }],
+};
+// Whitelist of safe environment variables to expose
+const SAFE_ENV_KEYS = new Set([
+    'NODE_ENV',
+    'HOME',
+    'USER',
+    'SHELL',
+    'LANG',
+    'TERM',
+]);
+// Keys that should never be exposed
+const SENSITIVE_KEY_PATTERNS = [
+    /SECRET/i,
+    /TOKEN/i,
+    /PASSWORD/i,
+    /KEY/i,
+    /CREDENTIAL/i,
+    /AUTH/i,
+    /PRIVATE/i,
+];
+function isSensitiveKey(key) {
+    return SENSITIVE_KEY_PATTERNS.some(pattern => pattern.test(key));
+}
+// Sanitize error messages before sending to renderer
+function sanitizeError(error) {
+    if (error instanceof Error) {
+        // Remove stack trace and sensitive path info
+        return error.message.replace(/\/Users\/[^/]+/g, '/Users/***');
+    }
+    return 'An error occurred';
+}
+// ============================================
+// Main handlers
+// ============================================
 function setupIpcHandlers(mainWindow) {
     // Claude process management
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_SPAWN, async (_event, projectPath) => {
+        // Validate project path
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return false;
+        }
         if (claudeBridge) {
             claudeBridge.stop();
         }
@@ -80,25 +160,34 @@ function setupIpcHandlers(mainWindow) {
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_STOP, async () => {
         return claudeBridge?.stop() ?? false;
     });
-    // File operations
+    // File operations with path validation
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_READ, async (_event, filePath) => {
+        if (!isPathAllowed(filePath, allowedProjectPaths)) {
+            throw new Error('Access denied: path outside allowed directories');
+        }
         try {
             return await (0, fileReader_1.readFileContent)(filePath);
         }
         catch (error) {
-            throw error;
+            throw new Error(sanitizeError(error));
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_WRITE, async (_event, filePath, content) => {
+        if (!isPathAllowed(filePath, allowedProjectPaths)) {
+            throw new Error('Access denied: path outside allowed directories');
+        }
         try {
             await (0, fileReader_1.writeFileContent)(filePath, content);
             return true;
         }
         catch (error) {
-            throw error;
+            throw new Error(sanitizeError(error));
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_WATCH, async (_event, dirPath) => {
+        if (!isPathAllowed(dirPath, allowedProjectPaths)) {
+            return false;
+        }
         if (!fileWatcher) {
             fileWatcher = new watcher_1.FileWatcher();
             fileWatcher.on('change', (event) => {
@@ -116,6 +205,10 @@ function setupIpcHandlers(mainWindow) {
             properties: ['openDirectory'],
             title: 'Select Project Folder',
         });
+        if (!result.canceled && result.filePaths[0]) {
+            // Add to allowed paths when user explicitly selects
+            allowedProjectPaths.add(result.filePaths[0]);
+        }
         return result.canceled ? null : result.filePaths[0];
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.DIALOG_SAVE, async (_event, defaultPath) => {
@@ -125,11 +218,7 @@ function setupIpcHandlers(mainWindow) {
         });
         return result.canceled ? null : result.filePath;
     });
-    // Input dialog - using message box with input field workaround
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.DIALOG_INPUT, async (_event, title, _placeholder) => {
-        // Electron doesn't have a native input dialog, so we use prompt via the renderer
-        // For now, we'll use a simple approach with showMessageBox for confirmation
-        // and rely on the renderer to collect input
         const result = await electron_1.dialog.showMessageBox(mainWindow, {
             type: 'question',
             title: title,
@@ -138,11 +227,19 @@ function setupIpcHandlers(mainWindow) {
         });
         return result.response === 0;
     });
-    // Project creation with Genius Team architecture
+    // Project creation with input validation
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.PROJECT_CREATE, async (_event, name, basePath) => {
-        console.log('[PROJECT_CREATE] Creating project:', { name, basePath });
+        // Validate project name
+        if (!isValidProjectName(name)) {
+            return { success: false, error: 'Invalid project name. Use only letters, numbers, dashes, and underscores.' };
+        }
+        // Validate base path is in allowed paths (selected via dialog)
+        if (!allowedProjectPaths.has(basePath)) {
+            return { success: false, error: 'Base path not authorized. Please select via folder dialog.' };
+        }
         const projectPath = path.join(basePath, name);
-        console.log('[PROJECT_CREATE] Full path:', projectPath);
+        // Add new project path to allowed paths
+        allowedProjectPaths.add(projectPath);
         try {
             // Create main project directory
             fs.mkdirSync(projectPath, { recursive: true });
@@ -230,18 +327,19 @@ State is stored in \`.genius/STATE.json\`.
             fs.writeFileSync(path.join(claudeDir, 'settings.json'), JSON.stringify(settingsJson, null, 2));
             // Create plan.md placeholder
             fs.writeFileSync(path.join(claudeDir, 'plan.md'), `# ${name} — Execution Plan\n\n**Project:** ${name}\n\n---\n\n*Run genius-architect to generate the execution plan.*\n`);
-            console.log('[PROJECT_CREATE] Success! Created at:', projectPath);
             return { success: true, path: projectPath };
         }
         catch (error) {
-            console.error('[PROJECT_CREATE] Error:', error);
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
     // ============================================
-    // File operations (extended)
+    // File operations (extended) with validation
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_EXISTS, async (_event, filePath) => {
+        if (!isPathAllowed(filePath, allowedProjectPaths)) {
+            return false;
+        }
         try {
             return fs.existsSync(filePath);
         }
@@ -250,6 +348,9 @@ State is stored in \`.genius/STATE.json\`.
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_LIST, async (_event, dirPath) => {
+        if (!isPathAllowed(dirPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied', files: [] };
+        }
         try {
             if (!fs.existsSync(dirPath)) {
                 return { success: false, error: 'Directory not found', files: [] };
@@ -264,22 +365,28 @@ State is stored in \`.genius/STATE.json\`.
             return { success: true, files };
         }
         catch (error) {
-            return { success: false, error: String(error), files: [] };
+            return { success: false, error: sanitizeError(error), files: [] };
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.FILE_MKDIR, async (_event, dirPath) => {
+        if (!isPathAllowed(dirPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied' };
+        }
         try {
             fs.mkdirSync(dirPath, { recursive: true });
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
     // ============================================
-    // Skills
+    // Skills (with path validation)
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.SKILLS_LIST, async (_event, projectPath) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied', skills: [] };
+        }
         try {
             const skillsDir = path.join(projectPath, '.claude', 'skills');
             if (!fs.existsSync(skillsDir)) {
@@ -297,10 +404,8 @@ State is stored in \`.genius/STATE.json\`.
                         name: entry.name,
                         path: skillPath,
                     };
-                    // Try to read skill.yaml or skill.md for metadata
                     if (fs.existsSync(skillYamlPath)) {
                         const content = fs.readFileSync(skillYamlPath, 'utf-8');
-                        // Basic YAML parsing for name and description
                         const nameMatch = content.match(/name:\s*["']?([^"'\n]+)["']?/);
                         const descMatch = content.match(/description:\s*["']?([^"'\n]+)["']?/);
                         if (nameMatch)
@@ -310,11 +415,9 @@ State is stored in \`.genius/STATE.json\`.
                     }
                     else if (fs.existsSync(skillMdPath)) {
                         const content = fs.readFileSync(skillMdPath, 'utf-8');
-                        // Extract first heading as name
                         const headingMatch = content.match(/^#\s+(.+)/m);
                         if (headingMatch)
                             skillData.name = headingMatch[1];
-                        // Extract first paragraph as description
                         const descMatch = content.match(/^[^#\n].+/m);
                         if (descMatch)
                             skillData.description = descMatch[0].substring(0, 100);
@@ -325,10 +428,13 @@ State is stored in \`.genius/STATE.json\`.
             return { success: true, skills };
         }
         catch (error) {
-            return { success: false, error: String(error), skills: [] };
+            return { success: false, error: sanitizeError(error), skills: [] };
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.SKILLS_GET, async (_event, skillPath) => {
+        if (!isPathAllowed(skillPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied' };
+        }
         try {
             const skillYamlPath = path.join(skillPath, 'skill.yaml');
             const skillMdPath = path.join(skillPath, 'skill.md');
@@ -341,15 +447,17 @@ State is stored in \`.genius/STATE.json\`.
             return { success: false, error: 'Skill file not found' };
         }
         catch (error) {
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
     // ============================================
-    // MCP Servers
+    // MCP Servers (with command validation)
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.MCP_LIST, async (_event, projectPath) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied', servers: [] };
+        }
         try {
-            // Check for MCP config in .claude/settings.json or mcp.json
             const settingsPath = path.join(projectPath, '.claude', 'settings.json');
             const mcpConfigPath = path.join(projectPath, '.claude', 'mcp.json');
             let mcpServers = [];
@@ -378,18 +486,52 @@ State is stored in \`.genius/STATE.json\`.
             return { success: true, servers: mcpServers };
         }
         catch (error) {
-            return { success: false, error: String(error), servers: [] };
+            return { success: false, error: sanitizeError(error), servers: [] };
         }
     });
+    // MCP_START with secure command execution (no shell: true)
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.MCP_START, async (_event, serverId, command, cwd) => {
+        if (!isPathAllowed(cwd, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied: invalid working directory' };
+        }
         try {
             if (mcpProcesses.has(serverId)) {
                 return { success: false, error: 'Server already running' };
             }
-            const [cmd, ...args] = command.split(' ');
+            // Parse command safely - split by spaces but handle quoted strings
+            const args = [];
+            let current = '';
+            let inQuote = false;
+            let quoteChar = '';
+            for (const char of command) {
+                if ((char === '"' || char === "'") && !inQuote) {
+                    inQuote = true;
+                    quoteChar = char;
+                }
+                else if (char === quoteChar && inQuote) {
+                    inQuote = false;
+                    quoteChar = '';
+                }
+                else if (char === ' ' && !inQuote) {
+                    if (current) {
+                        args.push(current);
+                        current = '';
+                    }
+                }
+                else {
+                    current += char;
+                }
+            }
+            if (current)
+                args.push(current);
+            const cmd = args.shift();
+            if (!cmd) {
+                return { success: false, error: 'Invalid command' };
+            }
+            // Use spawn without shell: true for security
             const proc = (0, child_process_1.spawn)(cmd, args, {
                 cwd,
-                shell: true,
+                shell: false, // SECURITY: Never use shell: true
                 env: { ...process.env },
             });
             proc.stdout?.on('data', (data) => {
@@ -418,7 +560,7 @@ State is stored in \`.genius/STATE.json\`.
             return { success: true, pid: proc.pid };
         }
         catch (error) {
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.MCP_STOP, async (_event, serverId) => {
@@ -432,48 +574,75 @@ State is stored in \`.genius/STATE.json\`.
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.MCP_STATUS, async (_event, serverId) => {
         return { running: mcpProcesses.has(serverId) };
     });
     // ============================================
-    // Environment
+    // Environment (with whitelist)
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.ENV_GET, async (_event, key) => {
+        // Only allow safe, whitelisted keys
+        if (!SAFE_ENV_KEYS.has(key) || isSensitiveKey(key)) {
+            return null;
+        }
         return process.env[key] || null;
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.ENV_GET_ALL, async () => {
-        // Return safe subset of environment variables
-        return {
-            NODE_ENV: process.env.NODE_ENV || 'development',
-            HOME: process.env.HOME,
-            USER: process.env.USER,
-            PATH: process.env.PATH,
-            SHELL: process.env.SHELL,
-        };
+        // Return only safe subset of environment variables
+        const safeEnv = {};
+        for (const key of SAFE_ENV_KEYS) {
+            if (!isSensitiveKey(key)) {
+                safeEnv[key] = process.env[key];
+            }
+        }
+        return safeEnv;
     });
     // ============================================
-    // Shell execution
+    // Shell execution (whitelisted commands only)
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.SHELL_EXEC, async (_event, command, cwd) => {
-        try {
-            const output = (0, child_process_1.execSync)(command, {
-                cwd: cwd || process.cwd(),
-                encoding: 'utf-8',
-                timeout: 30000,
-            });
-            return { success: true, output };
+        // Validate cwd if provided
+        if (cwd && !isPathAllowed(cwd, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied: invalid working directory' };
         }
-        catch (error) {
-            const execError = error;
+        // Normalize command (remove extra whitespace, trailing operators)
+        const normalizedCmd = command.trim().replace(/\s+2>&1.*$/, '').replace(/\s+\|\|.*$/, '').trim();
+        // Check if command is in whitelist
+        const allowedCmd = ALLOWED_COMMANDS[normalizedCmd];
+        if (!allowedCmd) {
             return {
                 success: false,
-                error: execError.message || String(error),
-                stdout: execError.stdout || '',
-                stderr: execError.stderr || '',
+                error: `Command not allowed. Whitelisted commands: ${Object.keys(ALLOWED_COMMANDS).join(', ')}`
             };
+        }
+        try {
+            const { cmd, args } = allowedCmd[0];
+            return new Promise((resolve) => {
+                (0, child_process_1.execFile)(cmd, args, {
+                    cwd: cwd || process.cwd(),
+                    encoding: 'utf-8',
+                    timeout: 60000, // 60 second timeout
+                    maxBuffer: 10 * 1024 * 1024, // 10MB max output
+                }, (error, stdout, stderr) => {
+                    if (error) {
+                        resolve({
+                            success: false,
+                            error: error.message,
+                            stdout: stdout || '',
+                            stderr: stderr || '',
+                        });
+                    }
+                    else {
+                        resolve({ success: true, output: stdout, stdout, stderr });
+                    }
+                });
+            });
+        }
+        catch (error) {
+            return { success: false, error: sanitizeError(error) };
         }
     });
     // ============================================
@@ -481,18 +650,22 @@ State is stored in \`.genius/STATE.json\`.
     // ============================================
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_AUTH_STATUS, async () => {
         try {
-            // Check if claude CLI is installed and authenticated
-            const output = (0, child_process_1.execSync)('claude --version', { encoding: 'utf-8', timeout: 5000 });
-            // If we get here, claude is installed
-            // Try to check auth status (this may vary based on claude CLI version)
-            try {
-                (0, child_process_1.execSync)('claude auth status', { encoding: 'utf-8', timeout: 5000 });
-                return { installed: true, authenticated: true, version: output.trim() };
-            }
-            catch {
-                // Auth check failed, but CLI is installed
-                return { installed: true, authenticated: false, version: output.trim() };
-            }
+            return new Promise((resolve) => {
+                (0, child_process_1.execFile)('claude', ['--version'], { encoding: 'utf-8', timeout: 5000 }, (error, stdout) => {
+                    if (error) {
+                        resolve({ installed: false, authenticated: false });
+                        return;
+                    }
+                    // Check auth status
+                    (0, child_process_1.execFile)('claude', ['auth', 'status'], { encoding: 'utf-8', timeout: 5000 }, (authError) => {
+                        resolve({
+                            installed: true,
+                            authenticated: !authError,
+                            version: stdout.trim()
+                        });
+                    });
+                });
+            });
         }
         catch {
             return { installed: false, authenticated: false };
@@ -500,22 +673,20 @@ State is stored in \`.genius/STATE.json\`.
     });
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_AUTH_LOGIN, async () => {
         try {
-            // Open claude auth login in a new terminal
-            // This is platform-specific
             const platform = process.platform;
             if (platform === 'darwin') {
                 (0, child_process_1.spawn)('open', ['-a', 'Terminal', '--args', 'claude', 'auth', 'login']);
             }
             else if (platform === 'linux') {
-                (0, child_process_1.spawn)('x-terminal-emulator', ['-e', 'claude auth login']);
+                (0, child_process_1.spawn)('x-terminal-emulator', ['-e', 'claude', 'auth', 'login']);
             }
             else if (platform === 'win32') {
-                (0, child_process_1.spawn)('cmd.exe', ['/c', 'start', 'cmd', '/k', 'claude auth login']);
+                (0, child_process_1.spawn)('cmd.exe', ['/c', 'start', 'cmd', '/k', 'claude', 'auth', 'login']);
             }
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: String(error) };
+            return { success: false, error: sanitizeError(error) };
         }
     });
 }
@@ -529,4 +700,5 @@ function cleanupIpc() {
     fileWatcher?.unwatchAll();
     claudeBridge = null;
     fileWatcher = null;
+    allowedProjectPaths.clear();
 }

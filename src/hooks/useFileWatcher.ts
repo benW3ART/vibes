@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 export interface FileChange {
   type: 'add' | 'change' | 'unlink';
@@ -18,9 +19,14 @@ export function useFileWatcher(dirPath?: string) {
       setChanges(prev => [...prev.slice(-99), change]);
     });
 
-    window.electron.file.watch(dirPath).then(result => {
-      setIsWatching(result);
-    });
+    window.electron.file.watch(dirPath)
+      .then(result => {
+        setIsWatching(result);
+      })
+      .catch(err => {
+        logger.error('[useFileWatcher] Failed to watch directory:', err);
+        setIsWatching(false);
+      });
 
     return () => {
       unsub();

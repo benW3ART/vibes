@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { SectionTitle, EmptyState, Button, Badge } from '@/components/ui';
 import { QuickActions } from '@/components/global';
 import { useProjectStore, toast } from '@/stores';
+import { logger } from '@/utils/logger';
 
 interface TestResult {
   id: string;
@@ -104,7 +105,7 @@ export function Tests() {
         ]);
       }
     } catch (err) {
-      console.error('[Tests] Failed to run:', err);
+      logger.error('[Tests] Failed to run:', err);
       toast.error('Failed to run tests');
     } finally {
       setIsRunning(false);

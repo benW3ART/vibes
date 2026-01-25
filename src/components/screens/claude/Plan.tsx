@@ -3,6 +3,7 @@ import { usePlan } from '@/hooks';
 import { useProjectStore, useNavigationStore, toast } from '@/stores';
 import { SectionTitle, Badge, Button, EmptyState } from '@/components/ui';
 import { QuickActions } from '@/components/global';
+import { logger } from '@/utils/logger';
 
 export function Plan() {
   const { currentProject } = useProjectStore();
@@ -58,7 +59,7 @@ export function Plan() {
         setScreen('dashboard');
       }
     } catch (err) {
-      console.error('[Plan] Failed to create plan:', err);
+      logger.error('[Plan] Failed to create plan:', err);
       toast.error('Failed to create plan');
     } finally {
       setIsCreating(false);

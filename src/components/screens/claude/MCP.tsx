@@ -12,15 +12,18 @@ export function MCP() {
   const [newServerCommand, setNewServerCommand] = useState('');
 
   const handleAddServer = async () => {
-    if (!newServerName.trim() || !newServerCommand.trim()) {
+    const serverName = newServerName.trim();
+    const serverCommand = newServerCommand.trim();
+
+    if (!serverName || !serverCommand) {
       toast.error('Please fill in all fields');
       return;
     }
-    await addServer(newServerName.trim(), newServerCommand.trim());
+    await addServer(serverName, serverCommand);
     setShowAddModal(false);
     setNewServerName('');
     setNewServerCommand('');
-    toast.success(`Server "${newServerName}" added!`);
+    toast.success(`Server "${serverName}" added!`);
   };
 
   const runningServers = servers.filter(s => s.status === 'running');

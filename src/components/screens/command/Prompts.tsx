@@ -3,6 +3,7 @@ import { useProjectStore, useNavigationStore, toast } from '@/stores';
 import { PromptCard, SectionTitle, Badge, Button, EmptyState } from '@/components/ui';
 import { QuickActions } from '@/components/global';
 import { usePlan } from '@/hooks';
+import { logger } from '@/utils/logger';
 
 export function Prompts() {
   const { prompts, addPrompt, currentProject } = useProjectStore();
@@ -57,7 +58,7 @@ export function Prompts() {
         toast.info('All plan tasks are already completed');
       }
     } catch (err) {
-      console.error('[Prompts] Failed to generate:', err);
+      logger.error('[Prompts] Failed to generate:', err);
       toast.error('Failed to generate prompts');
     } finally {
       setIsGenerating(false);

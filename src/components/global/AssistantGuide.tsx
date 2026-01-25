@@ -577,10 +577,41 @@ export function AssistantGuide() {
     }
   };
 
-  const formatContent = (content: string) => {
-    return content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br/>');
+  // Safe content formatter using React elements instead of innerHTML
+  const formatContent = (content: string): React.ReactNode => {
+    // Split by newlines first
+    const lines = content.split('\n');
+
+    return lines.map((line, lineIdx) => {
+      // Parse bold text within each line
+      const parts: React.ReactNode[] = [];
+      let lastIndex = 0;
+      const boldRegex = /\*\*(.*?)\*\*/g;
+      let match;
+
+      while ((match = boldRegex.exec(line)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          parts.push(line.slice(lastIndex, match.index));
+        }
+        // Add bold text
+        parts.push(<strong key={`bold-${lineIdx}-${match.index}`}>{match[1]}</strong>);
+        lastIndex = match.index + match[0].length;
+      }
+
+      // Add remaining text
+      if (lastIndex < line.length) {
+        parts.push(line.slice(lastIndex));
+      }
+
+      // Return line with line break (except for last line)
+      return (
+        <span key={`line-${lineIdx}`}>
+          {parts.length > 0 ? parts : line}
+          {lineIdx < lines.length - 1 && <br />}
+        </span>
+      );
+    });
   };
 
   return (
@@ -589,7 +620,7 @@ export function AssistantGuide() {
         <div className="panel-header-left">
           <span className="assistant-avatar">✨</span>
           <span className="panel-title">Assistant</span>
-          {claudeRunning && <span className="status-badge running">Claude actif</span>}
+          {claudeRunning && <span className="status-badge running">Claude active</span>}
         </div>
         <Button variant="ghost" size="sm" onClick={toggleChatPanel}>×</Button>
       </div>
@@ -604,10 +635,9 @@ export function AssistantGuide() {
       <div className="panel-content chat-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-message ${msg.role}`}>
-            <div
-              className="chat-message-content"
-              dangerouslySetInnerHTML={{ __html: formatContent(msg.content) }}
-            />
+            <div className="chat-message-content">
+              {formatContent(msg.content)}
+            </div>
             {msg.actions && (
               <div className="chat-message-actions">
                 {msg.actions.map((action, idx) => (

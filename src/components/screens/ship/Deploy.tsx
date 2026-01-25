@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { SectionTitle, Badge, Button, Card, CardHeader, CardTitle, CardContent, EmptyState } from '@/components/ui';
 import { QuickActions } from '@/components/global';
 import { useProjectStore, toast } from '@/stores';
+import { logger } from '@/utils/logger';
 
 interface Deployment {
   id: string;
@@ -101,7 +102,7 @@ export function Deploy() {
         toast.success(`Deployed to ${environment} (demo mode)`);
       }
     } catch (err) {
-      console.error('[Deploy] Failed:', err);
+      logger.error('[Deploy] Failed:', err);
       setDeployments(prev =>
         prev.map(d =>
           d.id === deploymentId

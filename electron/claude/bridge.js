@@ -19,7 +19,7 @@ class ClaudeBridge extends events_1.EventEmitter {
         try {
             this.process = (0, child_process_1.spawn)('claude', [], {
                 cwd: this.projectPath,
-                shell: true,
+                shell: false, // SECURITY: Never use shell: true
                 env: { ...process.env },
             });
             this.process.stdout?.on('data', (data) => {

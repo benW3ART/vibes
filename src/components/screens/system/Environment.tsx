@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Badge, Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
 import { QuickActions } from '@/components/global';
+import { logger } from '@/utils/logger';
 
 interface SystemInfo {
   platform: string;
@@ -68,7 +69,7 @@ export function Environment() {
         ]);
       }
     } catch (err) {
-      console.error('[Environment] Failed to load:', err);
+      logger.error('[Environment] Failed to load:', err);
     } finally {
       setIsLoading(false);
     }

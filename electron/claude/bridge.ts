@@ -27,7 +27,7 @@ export class ClaudeBridge extends EventEmitter {
     try {
       this.process = spawn('claude', [], {
         cwd: this.projectPath,
-        shell: true,
+        shell: false, // SECURITY: Never use shell: true
         env: { ...process.env },
       });
 

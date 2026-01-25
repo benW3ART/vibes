@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useNavigationStore, useProjectStore, toast } from '@/stores';
 import { Button } from '@/components/ui';
+import { logger } from '@/utils/logger';
 
 interface Message {
   id: string;
@@ -113,7 +114,7 @@ export function ChatPanel() {
         }, 500);
       }
     } catch (error) {
-      console.error('[ChatPanel] Error sending message:', error);
+      logger.error('[ChatPanel] Error sending message:', error);
       toast.error('Failed to send message to Claude');
       setIsWaiting(false);
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Skill } from '@/types';
+import { logger } from '@/utils/logger';
 
 // Helper to load disabled skills from settings.json
 async function loadDisabledSkills(projectPath: string): Promise<Set<string>> {
@@ -33,7 +34,7 @@ async function saveDisabledSkills(projectPath: string, disabledSkills: Set<strin
     config.disabledSkills = Array.from(disabledSkills);
     await window.electron.file.write(configPath, JSON.stringify(config, null, 2));
   } catch (err) {
-    console.error('[useSkills] Failed to save disabled skills:', err);
+    logger.error('[useSkills] Failed to save disabled skills:', err);
   }
 }
 
