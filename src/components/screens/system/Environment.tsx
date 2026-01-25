@@ -39,7 +39,7 @@ export function Environment() {
         // Extract system info
         setSystemInfo({
           platform: allEnv.PLATFORM || navigator.platform || 'Unknown',
-          nodeVersion: allEnv.NODE_VERSION || process.versions?.node || 'Unknown',
+          nodeVersion: allEnv.NODE_VERSION || 'Unknown',
           electronVersion: allEnv.ELECTRON_VERSION || 'Unknown',
           appVersion: allEnv.APP_VERSION || '0.1.0',
         });
