@@ -1,8 +1,18 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { setupIpcHandlers, cleanupIpc } from './ipc/handlers';
+import { handleGitHubCallback } from './oauth/github';
 
 let mainWindow: BrowserWindow | null = null;
+
+// Register vibes:// protocol for OAuth callbacks
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('vibes', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('vibes');
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -52,3 +62,33 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   cleanupIpc();
 });
+
+// Handle vibes:// protocol on macOS
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+
+  // Handle OAuth callbacks
+  if (url.startsWith('vibes://oauth/github/callback')) {
+    handleGitHubCallback(url, mainWindow);
+  }
+});
+
+// Handle vibes:// protocol on Windows/Linux (single instance)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    // Find the protocol URL in command line args
+    const url = commandLine.find(arg => arg.startsWith('vibes://'));
+    if (url && url.startsWith('vibes://oauth/github/callback')) {
+      handleGitHubCallback(url, mainWindow);
+    }
+
+    // Focus window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}

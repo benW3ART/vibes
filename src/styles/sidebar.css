@@ -103,3 +103,106 @@
   flex: 1;
   text-align: left;
 }
+
+/* Discovery Section */
+.nav-section-discovery {
+  background: rgba(249, 115, 22, 0.03);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(249, 115, 22, 0.1);
+}
+
+.nav-section-discovery .nav-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+.discovery-progress {
+  font-size: 0.65rem;
+  color: var(--primary);
+  font-weight: 600;
+  background: rgba(249, 115, 22, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+/* Phase Nav Item */
+.phase-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.phase-nav-item:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.phase-nav-item.active {
+  color: var(--primary);
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.2);
+}
+
+.phase-nav-item.status-completed,
+.phase-nav-item.status-approved {
+  color: var(--text-muted);
+}
+
+.phase-nav-item.status-in_progress,
+.phase-nav-item.status-awaiting_approval {
+  color: var(--text);
+}
+
+/* Phase Status Indicators */
+.phase-status {
+  font-size: 0.7rem;
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.phase-status-completed {
+  color: var(--success);
+}
+
+.phase-status-active {
+  color: var(--primary);
+  animation: pulse-phase 1.5s ease-in-out infinite;
+}
+
+.phase-status-pending {
+  color: var(--text-dim);
+}
+
+@keyframes pulse-phase {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.phase-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.phase-label {
+  flex: 1;
+}

@@ -6,7 +6,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const handlers_1 = require("./ipc/handlers");
+const github_1 = require("./oauth/github");
 let mainWindow = null;
+// Register vibes:// protocol for OAuth callbacks
+if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+        electron_1.app.setAsDefaultProtocolClient('vibes', process.execPath, [path_1.default.resolve(process.argv[1])]);
+    }
+}
+else {
+    electron_1.app.setAsDefaultProtocolClient('vibes');
+}
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
         width: 1400,
@@ -49,3 +59,31 @@ electron_1.app.on('activate', () => {
 electron_1.app.on('before-quit', () => {
     (0, handlers_1.cleanupIpc)();
 });
+// Handle vibes:// protocol on macOS
+electron_1.app.on('open-url', (event, url) => {
+    event.preventDefault();
+    // Handle OAuth callbacks
+    if (url.startsWith('vibes://oauth/github/callback')) {
+        (0, github_1.handleGitHubCallback)(url, mainWindow);
+    }
+});
+// Handle vibes:// protocol on Windows/Linux (single instance)
+const gotTheLock = electron_1.app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    electron_1.app.quit();
+}
+else {
+    electron_1.app.on('second-instance', (_event, commandLine) => {
+        // Find the protocol URL in command line args
+        const url = commandLine.find(arg => arg.startsWith('vibes://'));
+        if (url && url.startsWith('vibes://oauth/github/callback')) {
+            (0, github_1.handleGitHubCallback)(url, mainWindow);
+        }
+        // Focus window
+        if (mainWindow) {
+            if (mainWindow.isMinimized())
+                mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}

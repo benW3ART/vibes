@@ -231,7 +231,9 @@ test.describe('vibes - Visual IDE for Claude Code', () => {
         !e.includes('React') &&
         !e.includes('DevTools') &&
         !e.includes('favicon') &&
-        !e.includes('net::')
+        !e.includes('net::') &&
+        !e.includes('403') && // GitHub API rate limiting
+        !e.includes('Failed to fetch releases') // Expected without GitHub token
       );
 
       expect(criticalErrors).toHaveLength(0);

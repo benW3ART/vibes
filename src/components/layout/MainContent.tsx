@@ -10,6 +10,7 @@ import {
   MCP,
   Settings,
   Memory,
+  Marketplace,
   Code,
   Debug,
   Tests,
@@ -18,6 +19,7 @@ import {
   Analytics,
   Connections,
   Environment,
+  Updates,
 } from '@/components/screens';
 
 export function MainContent() {
@@ -34,6 +36,7 @@ export function MainContent() {
       case 'mcp': return <MCP />;
       case 'settings': return <Settings />;
       case 'memory': return <Memory />;
+      case 'marketplace': return <Marketplace />;
       case 'code': return <Code />;
       case 'debug': return <Debug />;
       case 'tests': return <Tests />;
@@ -42,6 +45,7 @@ export function MainContent() {
       case 'analytics': return <Analytics />;
       case 'connections': return <Connections />;
       case 'environment': return <Environment />;
+      case 'updates': return <Updates />;
       default: return <Dashboard />;
     }
   };

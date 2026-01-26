@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { SectionTitle, Badge, Button, EmptyState, StatusDot } from '@/components/ui';
 import { QuickActions } from '@/components/global';
 import { useConnectionsStore, toast } from '@/stores';
 import type { ConnectionType } from '@/stores';
+
+const AUTH_POLL_INTERVAL = 2000; // 2 seconds
+const AUTH_TIMEOUT = 300000; // 5 minutes
 
 // Service configuration
 const services = [
@@ -32,6 +35,22 @@ export function Connections() {
   } = useConnectionsStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [authPollingMessage, setAuthPollingMessage] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup polling on unmount
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+    setAuthPollingMessage(null);
+  }, []);
 
   const handleConnect = async (type: ConnectionType) => {
     setConnecting(type);
@@ -79,36 +98,72 @@ export function Connections() {
         return;
       }
 
-      if (!authStatus.authenticated) {
-        // Need to authenticate
-        toast.info('Opening Claude authentication...');
-        const loginResult = await window.electron.claude.authLogin();
-
-        if (!loginResult.success) {
-          addConnection({
-            type: 'claude',
-            name: 'Claude',
-            status: 'error',
-            error: loginResult.error || 'Authentication failed',
-          });
-          toast.error(loginResult.error || 'Authentication failed');
-          return;
-        }
+      if (authStatus.authenticated) {
+        // Already authenticated
+        addConnection({
+          type: 'claude',
+          name: 'Claude',
+          status: 'connected',
+          lastConnected: new Date(),
+          metadata: {
+            authenticated: true,
+            version: authStatus.version,
+          },
+        });
+        toast.success('Claude connected successfully');
+        return;
       }
 
-      // Successfully authenticated
-      addConnection({
-        type: 'claude',
-        name: 'Claude',
-        status: 'connected',
-        lastConnected: new Date(),
-        metadata: {
-          authenticated: true,
-          version: authStatus.version,
-        },
-      });
-      toast.success('Claude connected successfully');
+      // Need to authenticate - open terminal and start polling
+      toast.info('Opening Claude authentication in terminal...');
+      const loginResult = await window.electron.claude.authLogin();
+
+      if (!loginResult.success) {
+        addConnection({
+          type: 'claude',
+          name: 'Claude',
+          status: 'error',
+          error: loginResult.error || 'Failed to open authentication',
+        });
+        toast.error(loginResult.error || 'Failed to open authentication');
+        return;
+      }
+
+      // Start polling for auth status
+      setAuthPollingMessage('Complete authentication in terminal. Waiting...');
+
+      // Set timeout for 5 minutes
+      pollingTimeoutRef.current = setTimeout(() => {
+        stopPolling();
+        toast.error('Authentication timed out. Please try again.');
+        setConnecting(null);
+      }, AUTH_TIMEOUT);
+
+      // Poll every 2 seconds
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const status = await window.electron.claude.authStatus();
+          if (status.authenticated) {
+            stopPolling();
+            addConnection({
+              type: 'claude',
+              name: 'Claude',
+              status: 'connected',
+              lastConnected: new Date(),
+              metadata: {
+                authenticated: true,
+                version: status.version,
+              },
+            });
+            toast.success('Claude connected successfully!');
+            setConnecting(null);
+          }
+        } catch {
+          // Continue polling on error
+        }
+      }, AUTH_POLL_INTERVAL);
     } catch (error) {
+      stopPolling();
       addConnection({
         type: 'claude',
         name: 'Claude',
@@ -121,9 +176,6 @@ export function Connections() {
 
   const connectGitHub = async () => {
     // GitHub OAuth flow
-    // In production, this would open a browser window for OAuth
-    // and handle the callback via a custom protocol
-
     if (!window.electron) {
       // Demo mode - simulate connection
       addConnection({
@@ -140,47 +192,57 @@ export function Connections() {
       return;
     }
 
-    // In Electron mode, we would:
-    // 1. Open browser with GitHub OAuth URL
-    // 2. Handle callback via vibes:// protocol
-    // 3. Exchange code for access token
-    // For now, simulate the flow
     try {
-      // Open GitHub OAuth (placeholder - would need actual client_id)
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo';
-      // const redirectUri = 'vibes://oauth/github/callback';
-      // const scope = 'repo,user';
+      // Check if OAuth is configured
+      const status = await window.electron.github.authStatus();
+      if (!status.configured) {
+        addConnection({
+          type: 'github',
+          name: 'GitHub',
+          status: 'error',
+          error: 'GitHub OAuth not configured. Set VITE_GITHUB_CLIENT_ID and VITE_GITHUB_CLIENT_SECRET.',
+        });
+        toast.error('GitHub OAuth not configured. Check environment variables.');
+        return;
+      }
 
-      if (clientId === 'demo') {
-        // Demo mode
+      // Start OAuth flow - this opens browser and waits for callback
+      toast.info('Opening GitHub authentication in browser...');
+      setAuthPollingMessage('Complete authentication in browser. Waiting...');
+
+      const result = await window.electron.github.authStart();
+      setAuthPollingMessage(null);
+
+      if (result.success) {
         addConnection({
           type: 'github',
           name: 'GitHub',
           status: 'connected',
           lastConnected: new Date(),
-          metadata: { mode: 'demo' },
+          metadata: {
+            username: result.username,
+            scope: result.scope,
+          },
         });
-        toast.success('GitHub connected (demo mode - configure VITE_GITHUB_CLIENT_ID for production)');
-        return;
+        toast.success(`GitHub connected as ${result.username || 'user'}`);
+      } else {
+        addConnection({
+          type: 'github',
+          name: 'GitHub',
+          status: 'error',
+          error: result.error || 'Authentication failed',
+        });
+        toast.error(result.error || 'GitHub authentication failed');
       }
-
-      // Would open: https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}
-      toast.info('GitHub OAuth flow would open here...');
-
-      addConnection({
-        type: 'github',
-        name: 'GitHub',
-        status: 'connected',
-        lastConnected: new Date(),
-      });
     } catch (error) {
+      setAuthPollingMessage(null);
       addConnection({
         type: 'github',
         name: 'GitHub',
         status: 'error',
         error: String(error),
       });
-      throw error;
+      toast.error(`GitHub connection failed: ${error}`);
     }
   };
 
@@ -216,7 +278,20 @@ export function Connections() {
           </Button>
         </div>
 
-        {connectedServices.length === 0 ? (
+        {/* Auth polling notification */}
+        {authPollingMessage && (
+          <div className="auth-polling-banner">
+            <div className="auth-polling-content">
+              <span className="auth-polling-icon">🔄</span>
+              <span className="auth-polling-message">{authPollingMessage}</span>
+              <Button variant="ghost" size="sm" onClick={stopPolling}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {connectedServices.length === 0 && !authPollingMessage ? (
           <EmptyState
             icon="link"
             title="No connections configured"
@@ -226,7 +301,7 @@ export function Connections() {
               onClick: () => setShowAddModal(true),
             }}
           />
-        ) : (
+        ) : connectedServices.length === 0 && authPollingMessage ? null : (
           <div className="connections-grid">
             {connections.map(conn => {
               const service = getServiceInfo(conn.type);

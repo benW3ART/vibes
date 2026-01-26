@@ -12,6 +12,7 @@ const screenTitles: Record<ScreenId, string> = {
   mcp: 'MCP Servers',
   settings: 'Settings',
   memory: 'Memory',
+  marketplace: 'Marketplace',
   code: 'Code',
   debug: 'Debug',
   tests: 'Tests',
@@ -20,6 +21,7 @@ const screenTitles: Record<ScreenId, string> = {
   analytics: 'Analytics',
   connections: 'Connections',
   environment: 'Environment',
+  updates: 'Updates',
 };
 
 export function Header() {

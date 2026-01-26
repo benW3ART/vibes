@@ -1,4 +1,5 @@
 // AI Workflow Service - Manages AI-driven workflow phases via Claude Code CLI
+import { useSettingsStore } from '@/stores';
 
 export type WorkflowPhase = 'discovery' | 'specifications' | 'design' | 'architecture';
 
@@ -174,6 +175,12 @@ class AIWorkflowServiceClass {
     this.isElectronMode = typeof window !== 'undefined' && !!window.electron;
   }
 
+  // Get selected model ID from global settings (or null for default)
+  private getModelId(): string | undefined {
+    const modelId = useSettingsStore.getState().claudeModelId;
+    return modelId || undefined;
+  }
+
   // Initialize for a project
   init(projectPath: string): void {
     this.projectPath = projectPath;
@@ -261,7 +268,8 @@ class AIWorkflowServiceClass {
       const result = await window.electron.claude.query(
         this.projectPath,
         fullPrompt,
-        systemPrompt
+        systemPrompt,
+        this.getModelId()
       );
 
       this.unsubscribeChunk?.();
@@ -327,7 +335,8 @@ class AIWorkflowServiceClass {
       const result = await window.electron.claude.query(
         this.projectPath,
         prompt,
-        'You are a code generator. Output only the requested file content, no explanations.'
+        'You are a code generator. Output only the requested file content, no explanations.',
+        this.getModelId()
       );
 
       this.unsubscribeChunk?.();
@@ -410,12 +419,8 @@ class AIWorkflowServiceClass {
       response = `I understand: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"\n\nHow can I help you further?`;
     }
 
-    // Simulate streaming with delays
-    const words = response.split(' ');
-    for (const word of words) {
-      await new Promise(resolve => setTimeout(resolve, 30));
-      callbacks.onChunk?.(word + ' ');
-    }
+    // Deliver full response immediately (no fake delays)
+    callbacks.onChunk?.(response);
 
     this.conversationHistory.push({
       role: 'assistant',
@@ -479,12 +484,8 @@ class AIWorkflowServiceClass {
       }
     }
 
-    // Simulate streaming
-    const chunks = content.match(/.{1,50}/g) || [];
-    for (const chunk of chunks) {
-      await new Promise(resolve => setTimeout(resolve, 20));
-      callbacks.onChunk?.(chunk);
-    }
+    // Deliver full content immediately (no fake delays)
+    callbacks.onChunk?.(content);
 
     callbacks.onComplete?.(content);
     return content;

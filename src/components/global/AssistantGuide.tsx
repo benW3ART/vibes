@@ -116,33 +116,17 @@ export function AssistantGuide() {
     setMessages(prev => [...prev, msg]);
   }, []);
 
-  const addAssistantMessage = useCallback((content: string, actions?: DisplayMessage['actions'], immediate = false) => {
-    if (immediate) {
-      // For AI streaming mode, add immediately without delay
-      const msg: DisplayMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content,
-        timestamp: new Date(),
-        actions,
-      };
-      setMessages(prev => [...prev, msg]);
-      setIsTyping(false);
-    } else {
-      // For template mode, simulate typing delay
-      setIsTyping(true);
-      setTimeout(() => {
-        const msg: DisplayMessage = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content,
-          timestamp: new Date(),
-          actions,
-        };
-        setMessages(prev => [...prev, msg]);
-        setIsTyping(false);
-      }, 500);
-    }
+  const addAssistantMessage = useCallback((content: string, actions?: DisplayMessage['actions'], _immediate = false) => {
+    // Add message immediately - no fake delays
+    const msg: DisplayMessage = {
+      id: `assistant-${Date.now()}`,
+      role: 'assistant',
+      content,
+      timestamp: new Date(),
+      actions,
+    };
+    setMessages(prev => [...prev, msg]);
+    setIsTyping(false);
   }, []);
 
   // Start a streaming message and return the ID
@@ -916,11 +900,9 @@ export function AssistantGuide() {
         ))}
 
         {isTyping && (
-          <div className="chat-message assistant typing">
-            <div className="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+          <div className="chat-message assistant thinking">
+            <div className="thinking-indicator">
+              <span className="thinking-text">Claude is thinking...</span>
             </div>
           </div>
         )}

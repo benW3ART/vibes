@@ -10,11 +10,12 @@ contextBridge.exposeInMainWorld('electron', {
     pause: () => ipcRenderer.invoke('claude:pause'),
     resume: () => ipcRenderer.invoke('claude:resume'),
     stop: () => ipcRenderer.invoke('claude:stop'),
-    query: (projectPath: string, prompt: string, systemPrompt?: string) =>
-      ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt),
+    query: (projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) =>
+      ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt, modelId),
     queryCancel: () => ipcRenderer.invoke('claude:query:cancel'),
     authStatus: () => ipcRenderer.invoke('claude:auth:status'),
     authLogin: () => ipcRenderer.invoke('claude:auth:login'),
+    models: () => ipcRenderer.invoke('claude:models'),
     onOutput: (callback: Listener) => {
       const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
       ipcRenderer.on('claude:output', handler);
@@ -77,10 +78,19 @@ contextBridge.exposeInMainWorld('electron', {
     },
   },
 
+  // GitHub OAuth
+  github: {
+    authStatus: () => ipcRenderer.invoke('github:auth:status'),
+    authStart: () => ipcRenderer.invoke('github:auth:start'),
+  },
+
   // Environment
   env: {
     get: (key: string) => ipcRenderer.invoke('env:get', key),
     getAll: () => ipcRenderer.invoke('env:getAll'),
+    readFile: (projectPath: string) => ipcRenderer.invoke('env:readFile', projectPath),
+    writeFile: (projectPath: string, variables: Array<{ key: string; value: string }>) =>
+      ipcRenderer.invoke('env:writeFile', projectPath, variables),
   },
 
   // Shell

@@ -22,6 +22,12 @@ interface MCPServer {
   status: 'running' | 'stopped';
 }
 
+interface EnvVariable {
+  key: string;
+  value: string;
+  comment?: string;
+}
+
 interface ClaudeAuthStatus {
   installed: boolean;
   authenticated: boolean;
@@ -34,6 +40,18 @@ interface ClaudeQueryResult {
   error?: string;
 }
 
+interface ClaudeModel {
+  id: string;
+  name: string;
+  tier: 'opus' | 'sonnet' | 'haiku';
+}
+
+interface ClaudeModelsResult {
+  success: boolean;
+  models: ClaudeModel[];
+  error?: string;
+}
+
 interface ElectronAPI {
   claude: {
     spawn: (projectPath: string) => Promise<boolean>;
@@ -41,10 +59,11 @@ interface ElectronAPI {
     pause: () => Promise<boolean>;
     resume: () => Promise<boolean>;
     stop: () => Promise<boolean>;
-    query: (projectPath: string, prompt: string, systemPrompt?: string) => Promise<ClaudeQueryResult>;
+    query: (projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) => Promise<ClaudeQueryResult>;
     queryCancel: () => Promise<boolean>;
     authStatus: () => Promise<ClaudeAuthStatus>;
     authLogin: () => Promise<{ success: boolean; error?: string }>;
+    models: () => Promise<ClaudeModelsResult>;
     onOutput: (callback: Listener) => Unsubscribe;
     onError: (callback: Listener) => Unsubscribe;
     onExit: (callback: Listener) => Unsubscribe;
@@ -72,9 +91,30 @@ interface ElectronAPI {
     status: (serverId: string) => Promise<{ running: boolean }>;
     onOutput: (callback: Listener) => Unsubscribe;
   };
+  github: {
+    authStatus: () => Promise<{ configured: boolean }>;
+    authStart: () => Promise<{
+      success: boolean;
+      accessToken?: string;
+      tokenType?: string;
+      scope?: string;
+      username?: string;
+      error?: string;
+    }>;
+  };
   env: {
     get: (key: string) => Promise<string | null>;
     getAll: () => Promise<Record<string, string | undefined>>;
+    readFile: (projectPath: string) => Promise<{
+      success: boolean;
+      variables: EnvVariable[];
+      exists?: boolean;
+      error?: string;
+    }>;
+    writeFile: (projectPath: string, variables: Array<{ key: string; value: string }>) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
   };
   shell: {
     exec: (command: string, cwd?: string) => Promise<{ success: boolean; output?: string; error?: string; stdout?: string; stderr?: string }>;

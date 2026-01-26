@@ -15,9 +15,13 @@ class ClaudeBridge extends events_1.EventEmitter {
     }
     // One-shot query using claude --print for conversational AI
     async query(options) {
-        const { prompt, systemPrompt, timeout = 120000, onChunk } = options;
+        const { prompt, systemPrompt, modelId, timeout = 120000, onChunk } = options;
         return new Promise((resolve) => {
             const args = ['--print'];
+            // Add model if specified
+            if (modelId) {
+                args.push('--model', modelId);
+            }
             // Add system prompt if provided
             if (systemPrompt) {
                 args.push('--system-prompt', systemPrompt);

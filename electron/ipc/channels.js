@@ -13,6 +13,10 @@ exports.IPC_CHANNELS = {
     CLAUDE_QUERY_CANCEL: 'claude:query:cancel',
     CLAUDE_AUTH_STATUS: 'claude:auth:status',
     CLAUDE_AUTH_LOGIN: 'claude:auth:login',
+    CLAUDE_MODELS: 'claude:models',
+    // Renderer -> Main: GitHub
+    GITHUB_AUTH_START: 'github:auth:start',
+    GITHUB_AUTH_STATUS: 'github:auth:status',
     // Renderer -> Main: File operations
     FILE_READ: 'file:read',
     FILE_WRITE: 'file:write',
@@ -32,6 +36,8 @@ exports.IPC_CHANNELS = {
     // Renderer -> Main: Environment
     ENV_GET: 'env:get',
     ENV_GET_ALL: 'env:getAll',
+    ENV_READ_FILE: 'env:readFile',
+    ENV_WRITE_FILE: 'env:writeFile',
     // Renderer -> Main: Shell commands
     SHELL_EXEC: 'shell:exec',
     // Renderer -> Main: Dialogs

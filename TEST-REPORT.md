@@ -1,8 +1,9 @@
 # vibes — QA Test Report
 
-**Date:** 2026-01-25
+**Date:** 2026-01-26
 **Version:** 0.1.0
 **Status:** ✅ PASS
+**Auditor:** Genius QA v6.0
 
 ---
 
@@ -29,79 +30,92 @@
 | **Total** | **295** | **295** | **0** | **100%** |
 
 **Coverage:** ~80%
-**Duration:** ~2.1 minutes
+**Duration:** ~1.9 minutes
 
 ---
 
-## Functional Issues Identified
+## Recent Fixes Verified (2026-01-26)
 
-The E2E tests verify UI rendering and interactions pass, but code analysis reveals **functional gaps** requiring implementation:
+The following issues have been **resolved** since the last audit:
 
-### 🔴 Critical: Empty Action Handlers (22 instances)
+### ✅ Fixed: QuickActions Handlers
+All quick action buttons now have functional handlers:
+- Continue execution, Start all tasks, Fix blockers
+- Pause, Approve, Skip task
+- Execute all, Run next
+- Generate prompts, Generate tasks, Execute plan
+- Add skill, Add MCP server
+- Save settings, Add memory
+- AI review, Run dev server
+- AI fix all, Run all tests
+- Deploy production, Deploy staging
+- Add connection
 
-**File:** `src/components/global/QuickActions.tsx`
+### ✅ Fixed: Environment Section
+- Full CRUD operations (add, edit, delete variables)
+- Import/Export .env files
+- No longer shows fake defaults
 
-All quick action buttons have empty `() => {}` handlers:
+### ✅ Fixed: Code Screen
+- Dynamic file tree from actual project
+- File content viewing with syntax info
+- Expandable folders
 
-| Line | Action | Expected Behavior |
-|------|--------|-------------------|
-| 14 | Continue execution | Resume paused execution |
-| 15 | Start all tasks | Begin task execution |
-| 16 | Fix blockers | Navigate to blocked tasks |
-| 19 | Pause | Pause current execution |
-| 20 | Approve | Approve current task |
-| 21 | Skip task | Skip to next task |
-| 24 | Execute all | Run all pending tasks |
-| 25 | Run next | Execute next task only |
-| 28 | Generate prompts | Create prompts from plan |
-| 31 | Generate tasks | Create tasks from specs |
-| 32 | Execute plan | Start plan execution |
-| 35 | Add skill | Open skill browser/creator |
-| 38 | Add MCP server | Open MCP configuration |
-| 41 | Save (Settings) | Persist settings |
-| 44 | Add memory | Add to project memory |
-| 47 | AI review (Code) | Trigger code review |
-| 48 | Run dev server | Start development server |
-| 51 | AI fix all (Debug) | Auto-fix all issues |
-| 54 | Run all (Tests) | Execute test suite |
-| 57 | Deploy production | Deploy to production |
-| 58 | Deploy staging | Deploy to staging |
-| 65 | Add connection | Add new service connection |
+### ✅ Fixed: Chat/Assistant
+- Real Claude Code responses (no fake typing)
+- Proper streaming from `claude --print`
+- "Claude is thinking..." indicator
 
-**File:** `src/components/global/AssistantGuide.tsx:167`
-- "Voir les fichiers" button has empty handler
+### ✅ Fixed: Connections
+- Claude OAuth with polling for auth completion
+- GitHub OAuth via protocol handler
+- No more "(demo mode)" in Electron
 
-### 🟡 Medium: Demo-Only Functionality
+### ✅ Fixed: Skills Loading
+- Multiple filename patterns supported (SKILL.md, skill.md, etc.)
+- Now correctly loads skills from `.claude/skills/`
 
-These features simulate behavior but need real implementation:
-
-1. **Deploy.tsx** - Generates fake deployment URLs instead of real Vercel/Railway
-2. **Tests.tsx** - Shows hardcoded demo test results instead of running `npm test`
-3. **Connections.tsx** - Simulates OAuth flow instead of real authentication
-4. **Environment.tsx** - Shows demo environment variables
-
-### 🟢 Low: Console Logs in Production
-
-Debug statements that should be removed or converted to proper logging:
-
-| File | Count |
-|------|-------|
-| claudeService.ts | 3 |
-| fileGenerationService.ts | 3 |
-| useProjectFiles.ts | 1 |
-| ProjectSelector.tsx | 3 |
+### ✅ New Features Added
+- Discovery sidebar section with phase progress
+- Claude model selection (dynamic from `claude models`)
+- GitHub Marketplace for Skills/MCPs
+- Auto-Improvement/Updates screen with release monitoring
 
 ---
 
-## Recommendations
+## Remaining Demo-Only Functionality
 
-See `GENIUS-DEV-TASKS.md` for implementation prompts.
+These features work in **demo mode only** (when running in browser without Electron):
+
+| Feature | Browser Behavior | Electron Behavior |
+|---------|-----------------|-------------------|
+| Deploy | Fake URLs | Real Vercel/Railway (if CLI installed) |
+| Tests | Demo test results | Real `npm test` execution |
+| Dev Server | Not available | Real `npm run dev` execution |
+
+This is **by design** - browser mode is for demos/previews.
+
+---
+
+## Build & Lint Status
+
+| Check | Status |
+|-------|--------|
+| TypeScript | ✅ PASS (0 errors) |
+| ESLint | ✅ PASS (3 warnings - intentional) |
+| Build | ✅ PASS |
+| Playwright | ✅ 295/295 tests pass |
 
 ---
 
 ## Test Environment
 
-- **Platform:** macOS Darwin
+- **Platform:** macOS Darwin 25.3.0
 - **Node:** v20+
 - **Browser:** Chromium (Playwright)
 - **Test Runner:** Playwright Test
+- **Duration:** 1.9 minutes
+
+---
+
+*Generated by Genius QA v6.0*

@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from './channels';
 import { ClaudeBridge } from '../claude/bridge';
 import { FileWatcher } from '../claude/watcher';
 import { readFileContent, writeFileContent } from '../claude/fileReader';
+import { startGitHubOAuth, isGitHubOAuthConfigured } from '../oauth/github';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, ChildProcess, execFile } from 'child_process';
@@ -154,7 +155,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
   let queryBridge: ClaudeBridge | null = null;
 
   // Claude query (one-shot for conversational AI)
-  ipcMain.handle(IPC_CHANNELS.CLAUDE_QUERY, async (_event, projectPath: string, prompt: string, systemPrompt?: string) => {
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_QUERY, async (_event, projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) => {
     // Validate project path
     if (!isPathAllowed(projectPath, allowedProjectPaths)) {
       return { success: false, error: 'Access denied: path outside allowed directories' };
@@ -173,6 +174,7 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       const result = await queryBridge.query({
         prompt,
         systemPrompt,
+        modelId,
         timeout: 120000,
         onChunk: (chunk) => {
           mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_QUERY_CHUNK, chunk);
@@ -459,11 +461,12 @@ State is stored in \`.genius/STATE.json\`.
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       const skills = [];
 
+      // Check multiple filename patterns (case-insensitive support)
+      const skillFilePatterns = ['SKILL.md', 'skill.md', 'SKILL.yaml', 'skill.yaml', 'index.md'];
+
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const skillPath = path.join(skillsDir, entry.name);
-          const skillYamlPath = path.join(skillPath, 'skill.yaml');
-          const skillMdPath = path.join(skillPath, 'skill.md');
 
           let skillData: { id: string; name: string; description?: string; path: string } = {
             id: entry.name,
@@ -471,18 +474,44 @@ State is stored in \`.genius/STATE.json\`.
             path: skillPath,
           };
 
-          if (fs.existsSync(skillYamlPath)) {
-            const content = fs.readFileSync(skillYamlPath, 'utf-8');
-            const nameMatch = content.match(/name:\s*["']?([^"'\n]+)["']?/);
-            const descMatch = content.match(/description:\s*["']?([^"'\n]+)["']?/);
-            if (nameMatch) skillData.name = nameMatch[1];
-            if (descMatch) skillData.description = descMatch[1];
-          } else if (fs.existsSync(skillMdPath)) {
-            const content = fs.readFileSync(skillMdPath, 'utf-8');
-            const headingMatch = content.match(/^#\s+(.+)/m);
-            if (headingMatch) skillData.name = headingMatch[1];
-            const descMatch = content.match(/^[^#\n].+/m);
-            if (descMatch) skillData.description = descMatch[0].substring(0, 100);
+          // Find the skill file using multiple patterns
+          let skillFilePath: string | null = null;
+          let skillFileType: 'yaml' | 'markdown' = 'markdown';
+
+          for (const pattern of skillFilePatterns) {
+            const candidate = path.join(skillPath, pattern);
+            if (fs.existsSync(candidate)) {
+              skillFilePath = candidate;
+              skillFileType = pattern.endsWith('.yaml') ? 'yaml' : 'markdown';
+              break;
+            }
+          }
+
+          if (skillFilePath) {
+            const content = fs.readFileSync(skillFilePath, 'utf-8');
+
+            if (skillFileType === 'yaml') {
+              const nameMatch = content.match(/name:\s*["']?([^"'\n]+)["']?/);
+              const descMatch = content.match(/description:\s*["']?([^"'\n]+)["']?/);
+              if (nameMatch) skillData.name = nameMatch[1];
+              if (descMatch) skillData.description = descMatch[1];
+            } else {
+              // Markdown: check for YAML frontmatter first
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatter = frontmatterMatch[1];
+                const nameMatch = frontmatter.match(/name:\s*["']?([^"'\n]+)["']?/);
+                const descMatch = frontmatter.match(/description:\s*["']?([^"'\n]+)["']?/);
+                if (nameMatch) skillData.name = nameMatch[1];
+                if (descMatch) skillData.description = descMatch[1];
+              } else {
+                // Fallback to parsing heading and first paragraph
+                const headingMatch = content.match(/^#\s+(.+)/m);
+                if (headingMatch) skillData.name = headingMatch[1];
+                const descMatch = content.match(/^[^#\n].+/m);
+                if (descMatch) skillData.description = descMatch[0].substring(0, 100);
+              }
+            }
           }
 
           skills.push(skillData);
@@ -500,13 +529,15 @@ State is stored in \`.genius/STATE.json\`.
       return { success: false, error: 'Access denied' };
     }
     try {
-      const skillYamlPath = path.join(skillPath, 'skill.yaml');
-      const skillMdPath = path.join(skillPath, 'skill.md');
+      // Check multiple filename patterns (case-insensitive support)
+      const skillFilePatterns = ['SKILL.md', 'skill.md', 'SKILL.yaml', 'skill.yaml', 'index.md'];
 
-      if (fs.existsSync(skillYamlPath)) {
-        return { success: true, content: fs.readFileSync(skillYamlPath, 'utf-8'), type: 'yaml' };
-      } else if (fs.existsSync(skillMdPath)) {
-        return { success: true, content: fs.readFileSync(skillMdPath, 'utf-8'), type: 'markdown' };
+      for (const pattern of skillFilePatterns) {
+        const candidate = path.join(skillPath, pattern);
+        if (fs.existsSync(candidate)) {
+          const type = pattern.endsWith('.yaml') ? 'yaml' : 'markdown';
+          return { success: true, content: fs.readFileSync(candidate, 'utf-8'), type };
+        }
       }
 
       return { success: false, error: 'Skill file not found' };
@@ -678,6 +709,78 @@ State is stored in \`.genius/STATE.json\`.
     return safeEnv;
   });
 
+  // Read .env file from project directory
+  ipcMain.handle(IPC_CHANNELS.ENV_READ_FILE, async (_event, projectPath: string) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied', variables: [] };
+    }
+    try {
+      const envPath = path.join(projectPath, '.env');
+      if (!fs.existsSync(envPath)) {
+        return { success: true, variables: [], exists: false };
+      }
+
+      const content = fs.readFileSync(envPath, 'utf-8');
+      const variables: Array<{ key: string; value: string; comment?: string }> = [];
+
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+        if (match) {
+          const [, key, rawValue] = match;
+          // Remove surrounding quotes if present
+          let value = rawValue;
+          if ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          variables.push({ key, value });
+        }
+      }
+
+      return { success: true, variables, exists: true };
+    } catch (error) {
+      return { success: false, error: sanitizeError(error), variables: [] };
+    }
+  });
+
+  // Write .env file to project directory
+  ipcMain.handle(IPC_CHANNELS.ENV_WRITE_FILE, async (_event, projectPath: string, variables: Array<{ key: string; value: string }>) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied' };
+    }
+    try {
+      const envPath = path.join(projectPath, '.env');
+
+      // Build .env content with proper escaping
+      const lines: string[] = [
+        '# Environment variables',
+        '# Generated by vibes',
+        '',
+      ];
+
+      for (const { key, value } of variables) {
+        // Validate key format
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+          return { success: false, error: `Invalid variable name: ${key}` };
+        }
+        // Quote values that contain spaces, quotes, or special chars
+        const needsQuotes = /[\s"'$`\\]/.test(value);
+        const escapedValue = needsQuotes
+          ? `"${value.replace(/"/g, '\\"')}"`
+          : value;
+        lines.push(`${key}=${escapedValue}`);
+      }
+
+      fs.writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: sanitizeError(error) };
+    }
+  });
+
   // ============================================
   // Shell execution (whitelisted commands only)
   // ============================================
@@ -769,6 +872,120 @@ State is stored in \`.genius/STATE.json\`.
     } catch (error) {
       return { success: false, error: sanitizeError(error) };
     }
+  });
+
+  // ============================================
+  // Claude Models (Dynamic)
+  // ============================================
+
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_MODELS, async () => {
+    try {
+      return new Promise((resolve) => {
+        execFile('claude', ['models'], { encoding: 'utf-8', timeout: 10000 }, (error, stdout) => {
+          if (error) {
+            // Return default models if CLI fails
+            resolve({
+              success: false,
+              error: sanitizeError(error),
+              models: [
+                { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', tier: 'sonnet' },
+                { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', tier: 'opus' },
+                { id: 'claude-haiku-3-5-20241022', name: 'Claude Haiku 3.5', tier: 'haiku' },
+              ],
+            });
+            return;
+          }
+
+          // Parse the output to extract model information
+          const lines = stdout.trim().split('\n');
+          const models: Array<{ id: string; name: string; tier: string }> = [];
+
+          for (const line of lines) {
+            // Try to parse model IDs from the output
+            // Expected format varies, but model IDs typically follow patterns like:
+            // claude-opus-4-20250514, claude-sonnet-4-20250514, etc.
+            const modelMatch = line.match(/(claude-(?:opus|sonnet|haiku)-[\w-]+)/i);
+            if (modelMatch) {
+              const id = modelMatch[1];
+              let tier = 'sonnet';
+              let name = id;
+
+              if (id.includes('opus')) {
+                tier = 'opus';
+                name = 'Claude Opus ' + (id.match(/opus-(\d)/)?.[1] || '4');
+              } else if (id.includes('sonnet')) {
+                tier = 'sonnet';
+                name = 'Claude Sonnet ' + (id.match(/sonnet-(\d)/)?.[1] || '4');
+              } else if (id.includes('haiku')) {
+                tier = 'haiku';
+                name = 'Claude Haiku ' + (id.match(/haiku-(\d)/)?.[1] || '3.5');
+              }
+
+              // Avoid duplicates
+              if (!models.some(m => m.id === id)) {
+                models.push({ id, name, tier });
+              }
+            }
+          }
+
+          // If no models found, return defaults
+          if (models.length === 0) {
+            resolve({
+              success: true,
+              models: [
+                { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', tier: 'sonnet' },
+                { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', tier: 'opus' },
+                { id: 'claude-haiku-3-5-20241022', name: 'Claude Haiku 3.5', tier: 'haiku' },
+              ],
+            });
+            return;
+          }
+
+          resolve({ success: true, models });
+        });
+      });
+    } catch (error) {
+      return {
+        success: false,
+        error: sanitizeError(error),
+        models: [
+          { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', tier: 'sonnet' },
+          { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', tier: 'opus' },
+          { id: 'claude-haiku-3-5-20241022', name: 'Claude Haiku 3.5', tier: 'haiku' },
+        ],
+      };
+    }
+  });
+
+  // ============================================
+  // GitHub OAuth
+  // ============================================
+
+  ipcMain.handle(IPC_CHANNELS.GITHUB_AUTH_STATUS, async () => {
+    return {
+      configured: isGitHubOAuthConfigured(),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GITHUB_AUTH_START, async () => {
+    return new Promise((resolve) => {
+      const started = startGitHubOAuth((result) => {
+        resolve(result);
+      });
+
+      if (!started) {
+        // Config error already resolved in callback
+        return;
+      }
+
+      // Set a timeout for the OAuth flow (5 minutes)
+      setTimeout(() => {
+        resolve({
+          success: false,
+          error: 'OAuth timed out. Please try again.',
+        });
+      }, 300000);
+    });
   });
 }
 

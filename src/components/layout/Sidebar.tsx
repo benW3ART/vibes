@@ -1,10 +1,21 @@
-import { useNavigationStore } from '@/stores';
-import { NavItem } from '@/components/ui';
+import { useNavigationStore, useWorkflowStore, phaseDisplayInfo } from '@/stores';
+import { NavItem, PhaseNavItem } from '@/components/ui';
 import type { ScreenId } from '@/types';
+import type { WorkflowPhase } from '@/stores/workflowStore';
 import { ProjectSelector } from './ProjectSelector';
 import { ModeSelector } from './ModeSelector';
 import { UserCard } from './UserCard';
 import { useDemo } from '@/demo';
+import { useReleaseMonitor } from '@/hooks/useReleaseMonitor';
+
+// Discovery phases to show in sidebar (pre-code phases only)
+const discoveryPhases: WorkflowPhase[] = [
+  'discovery',
+  'market-analysis',
+  'specifications',
+  'design',
+  'architecture',
+];
 
 interface NavSectionItem {
   id: ScreenId;
@@ -37,6 +48,7 @@ const navSections: NavSection[] = [
       { id: 'plan' as ScreenId, label: 'Plan', icon: '📝' },
       { id: 'skills' as ScreenId, label: 'Skills', icon: '⚡' },
       { id: 'mcp' as ScreenId, label: 'MCP', icon: '🔌' },
+      { id: 'marketplace' as ScreenId, label: 'Marketplace', icon: '🛒' },
       { id: 'settings' as ScreenId, label: 'Settings', icon: '⚙️' },
       { id: 'memory' as ScreenId, label: 'Memory', icon: '🧠' },
     ],
@@ -65,13 +77,16 @@ const navSections: NavSection[] = [
     items: [
       { id: 'connections' as ScreenId, label: 'Connections', icon: '🔗' },
       { id: 'environment' as ScreenId, label: 'Environment', icon: '🌐' },
+      { id: 'updates' as ScreenId, label: 'Updates', icon: '🔄' },
     ],
   },
 ];
 
 export function Sidebar() {
-  const { currentScreen, setScreen } = useNavigationStore();
+  const { currentScreen, setScreen, setChatPanelOpen } = useNavigationStore();
+  const { phases, currentPhase, setPhase } = useWorkflowStore();
   const { startTutorial, isDemoMode, startDemo } = useDemo();
+  const { hasUpdates, suggestions } = useReleaseMonitor();
 
   const handleHelpClick = () => {
     if (isDemoMode) {
@@ -80,6 +95,17 @@ export function Sidebar() {
       startDemo();
       startTutorial();
     }
+  };
+
+  // Calculate discovery progress
+  const completedCount = discoveryPhases.filter(
+    p => phases[p]?.status === 'completed' || phases[p]?.status === 'approved'
+  ).length;
+
+  // Handle phase click - open chat panel and set phase
+  const handlePhaseClick = (phase: WorkflowPhase) => {
+    setPhase(phase);
+    setChatPanelOpen(true);
   };
 
   return (
@@ -91,6 +117,25 @@ export function Sidebar() {
       <div className="sidebar-content">
         <ProjectSelector />
         <ModeSelector />
+
+        {/* Discovery Section - Pre-code phases */}
+        <div className="nav-section nav-section-discovery">
+          <div className="nav-section-title">
+            <span>DISCOVERY</span>
+            <span className="discovery-progress">{completedCount}/{discoveryPhases.length}</span>
+          </div>
+          {discoveryPhases.map((phase) => (
+            <PhaseNavItem
+              key={phase}
+              phase={phase}
+              label={phaseDisplayInfo[phase].label}
+              icon={phaseDisplayInfo[phase].icon}
+              status={phases[phase]?.status || 'pending'}
+              isActive={currentPhase === phase}
+              onClick={() => handlePhaseClick(phase)}
+            />
+          ))}
+        </div>
 
         {navSections.map((section) => (
           <div key={section.id} className="nav-section">
@@ -104,6 +149,9 @@ export function Sidebar() {
                 active={currentScreen === item.id}
                 shortcut={item.shortcut}
                 onClick={setScreen}
+                badge={item.id === 'updates' && (hasUpdates || suggestions.length > 0)
+                  ? (suggestions.length || '!')
+                  : undefined}
               />
             ))}
           </div>

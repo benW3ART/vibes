@@ -9,12 +9,16 @@ interface SettingsState {
   notifications: boolean;
   soundEffects: boolean;
 
+  // Claude settings (GLOBAL)
+  claudeModelId: string | null;
+
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   setFontSize: (size: 'sm' | 'md' | 'lg') => void;
   setShowLineNumbers: (show: boolean) => void;
   setAutoSave: (enabled: boolean) => void;
   setNotifications: (enabled: boolean) => void;
   setSoundEffects: (enabled: boolean) => void;
+  setClaudeModelId: (modelId: string | null) => void;
   resetSettings: () => void;
 }
 
@@ -25,6 +29,7 @@ const defaultSettings = {
   autoSave: true,
   notifications: true,
   soundEffects: false,
+  claudeModelId: null as string | null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -38,6 +43,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoSave: (autoSave) => set({ autoSave }),
       setNotifications: (notifications) => set({ notifications }),
       setSoundEffects: (soundEffects) => set({ soundEffects }),
+      setClaudeModelId: (claudeModelId) => set({ claudeModelId }),
       resetSettings: () => set(defaultSettings),
     }),
     {

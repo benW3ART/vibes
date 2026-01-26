@@ -9,10 +9,11 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         pause: () => electron_1.ipcRenderer.invoke('claude:pause'),
         resume: () => electron_1.ipcRenderer.invoke('claude:resume'),
         stop: () => electron_1.ipcRenderer.invoke('claude:stop'),
-        query: (projectPath, prompt, systemPrompt) => electron_1.ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt),
+        query: (projectPath, prompt, systemPrompt, modelId) => electron_1.ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt, modelId),
         queryCancel: () => electron_1.ipcRenderer.invoke('claude:query:cancel'),
         authStatus: () => electron_1.ipcRenderer.invoke('claude:auth:status'),
         authLogin: () => electron_1.ipcRenderer.invoke('claude:auth:login'),
+        models: () => electron_1.ipcRenderer.invoke('claude:models'),
         onOutput: (callback) => {
             const handler = (_event, ...args) => callback(...args);
             electron_1.ipcRenderer.on('claude:output', handler);
@@ -71,10 +72,17 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
             return () => electron_1.ipcRenderer.removeListener('mcp:output', handler);
         },
     },
+    // GitHub OAuth
+    github: {
+        authStatus: () => electron_1.ipcRenderer.invoke('github:auth:status'),
+        authStart: () => electron_1.ipcRenderer.invoke('github:auth:start'),
+    },
     // Environment
     env: {
         get: (key) => electron_1.ipcRenderer.invoke('env:get', key),
         getAll: () => electron_1.ipcRenderer.invoke('env:getAll'),
+        readFile: (projectPath) => electron_1.ipcRenderer.invoke('env:readFile', projectPath),
+        writeFile: (projectPath, variables) => electron_1.ipcRenderer.invoke('env:writeFile', projectPath, variables),
     },
     // Shell
     shell: {

@@ -1,6 +1,7 @@
 import { useSettingsStore } from '@/stores';
-import { Toggle, Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import { Toggle, Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
 import { QuickActions } from '@/components/global';
+import { useClaudeModels } from '@/hooks/useClaudeModels';
 
 export function Settings() {
   const {
@@ -10,20 +11,69 @@ export function Settings() {
     autoSave,
     notifications,
     soundEffects,
+    claudeModelId,
     setTheme,
     setFontSize,
     setShowLineNumbers,
     setAutoSave,
     setNotifications,
     setSoundEffects,
+    setClaudeModelId,
     resetSettings,
   } = useSettingsStore();
+
+  const { models, isLoading: modelsLoading, error: modelsError, refresh: refreshModels } = useClaudeModels();
 
   return (
     <div className="screen settings">
       <QuickActions />
 
       <div className="settings-content">
+        {/* Claude Settings - GLOBAL */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Claude <Badge variant="info">Global</Badge>
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={refreshModels} disabled={modelsLoading}>
+              {modelsLoading ? 'Loading...' : 'Refresh Models'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="settings-row">
+              <div className="settings-label">
+                <span>Model</span>
+                <span className="settings-desc">
+                  Select Claude model for AI operations
+                  {modelsError && <span className="settings-error"> (using defaults)</span>}
+                </span>
+              </div>
+              <select
+                className="settings-select"
+                value={claudeModelId || ''}
+                onChange={(e) => setClaudeModelId(e.target.value || null)}
+                disabled={modelsLoading}
+              >
+                <option value="">Auto (default)</option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} ({model.tier})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {claudeModelId && (
+              <div className="settings-row">
+                <div className="settings-label">
+                  <span>Current Model ID</span>
+                  <span className="settings-desc">Exact model identifier being used</span>
+                </div>
+                <code className="settings-code">{claudeModelId}</code>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Appearance</CardTitle>

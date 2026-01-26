@@ -10,6 +10,7 @@ export type ScreenId =
   | 'mcp'
   | 'settings'
   | 'memory'
+  | 'marketplace'
   // Build
   | 'code'
   | 'debug'
@@ -20,7 +21,8 @@ export type ScreenId =
   | 'analytics'
   // System
   | 'connections'
-  | 'environment';
+  | 'environment'
+  | 'updates';
 
 export interface NavSection {
   id: string;

@@ -19,3 +19,5 @@ export * from './EmptyState';
 export * from './Skeleton';
 export * from './Toast';
 export * from './ToastContainer';
+export * from './Modal';
+export * from './PhaseNavItem';

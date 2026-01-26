@@ -11,6 +11,7 @@ export interface ClaudeBridgeOptions {
 export interface QueryOptions {
   prompt: string;
   systemPrompt?: string;
+  modelId?: string; // Model ID to use (e.g., 'claude-sonnet-4-20250514')
   timeout?: number;
   onChunk?: (chunk: string) => void;
 }
@@ -35,10 +36,15 @@ export class ClaudeBridge extends EventEmitter {
 
   // One-shot query using claude --print for conversational AI
   async query(options: QueryOptions): Promise<QueryResult> {
-    const { prompt, systemPrompt, timeout = 120000, onChunk } = options;
+    const { prompt, systemPrompt, modelId, timeout = 120000, onChunk } = options;
 
     return new Promise((resolve) => {
       const args: string[] = ['--print'];
+
+      // Add model if specified
+      if (modelId) {
+        args.push('--model', modelId);
+      }
 
       // Add system prompt if provided
       if (systemPrompt) {

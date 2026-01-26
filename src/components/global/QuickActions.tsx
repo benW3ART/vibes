@@ -314,6 +314,8 @@ const createActions = (
     },
   ],
   environment: [],
+  marketplace: [],
+  updates: [],
 });
 
 export function QuickActions() {
