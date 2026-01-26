@@ -42,5 +42,8 @@
     "wait-on": "^7.2.0"
   },
   "author": "Genius Team",
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "tar": "^7.5.6"
+  }
 }

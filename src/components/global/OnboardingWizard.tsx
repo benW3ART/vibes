@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useConnectionsStore } from '@/stores';
 import { Button, Badge } from '@/components/ui';
 
@@ -42,6 +42,22 @@ export function OnboardingWizard() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+
+  // SEC-006 FIX: Track poll interval for cleanup
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Check connection status on mount and when connections change
   const claudeConnected = isClaudeConnected();
@@ -89,6 +105,7 @@ export function OnboardingWizard() {
       }
     };
     checkClaude();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount to check initial auth status
   }, []);
 
   const handleConnectClaude = async () => {
@@ -104,12 +121,15 @@ export function OnboardingWizard() {
       // Start auth login (opens terminal)
       await window.electron.claude.authLogin();
 
-      // Poll for auth status
-      const pollInterval = setInterval(async () => {
+      // Poll for auth status - store ref for cleanup
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const status = await window.electron.claude.authStatus();
           if (status.authenticated) {
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
             setIsConnecting(false);
 
             const existing = getConnection('claude');
@@ -134,13 +154,14 @@ export function OnboardingWizard() {
         }
       }, 2000);
 
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        if (isConnecting) {
-          setIsConnecting(false);
-          setError('Authentication timed out. Please try again.');
+      // Timeout after 5 minutes - store ref for cleanup
+      timeoutRef.current = setTimeout(() => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
         }
+        setIsConnecting(false);
+        setError('Authentication timed out. Please try again.');
       }, 300000);
     } catch (err) {
       setIsConnecting(false);

@@ -103,6 +103,7 @@ export function AssistantGuide() {
     };
 
     checkAIAvailability();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Callbacks are stable, only re-run when project/phase changes
   }, [currentProject, currentPhase, setChatPanelOpen]);
 
   const addSystemMessage = useCallback((content: string, actions?: DisplayMessage['actions']) => {

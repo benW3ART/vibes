@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<security-audit>
+  <metadata>
+    <project>vibes</project>
+    <version>0.1.0</version>
+    <date>2026-01-26</date>
+    <auditor>Genius Security v6.0</auditor>
+  </metadata>
+
+  <summary>
+    <overall-risk>MEDIUM</overall-risk>
+    <critical-findings>0</critical-findings>
+    <high-findings>2</high-findings>
+    <medium-findings>3</medium-findings>
+    <low-findings>2</low-findings>
+  </summary>
+
+  <findings>
+    <!-- High Severity -->
+    <finding severity="HIGH" id="SEC-001">
+      <title>GitHub Access Token Stored in localStorage</title>
+      <category>A02:2021 - Cryptographic Failures</category>
+      <location>src/stores/connectionsStore.ts, src/components/global/OnboardingWizard.tsx</location>
+      <description>
+        The GitHub OAuth access token is stored in localStorage via zustand persist middleware.
+        localStorage is accessible to any JavaScript running on the page and persists across sessions.
+        If an XSS vulnerability is discovered, tokens could be exfiltrated.
+      </description>
+      <impact>Token theft could allow unauthorized access to user's GitHub account</impact>
+      <recommendation>
+        Store sensitive tokens in Electron's safeStorage or encrypted keychain.
+        Use session-only storage or implement token refresh mechanism.
+      </recommendation>
+      <code-reference>
+        // OnboardingWizard.tsx:178
+        metadata: { username: result.username, accessToken: result.accessToken }
+        
+        // connectionsStore.ts uses persist middleware to localStorage
+        persist({ name: 'vibes-connections' })
+      </code-reference>
+    </finding>
+
+    <finding severity="HIGH" id="SEC-002">
+      <title>Dependency Vulnerability - tar package</title>
+      <category>A06:2021 - Vulnerable and Outdated Components</category>
+      <location>node_modules/tar (via electron-builder)</location>
+      <description>
+        The tar package (<=7.5.3) has known vulnerabilities:
+        - GHSA-8qq5-rm4j-mr97: Arbitrary File Overwrite via Symlink Poisoning
+        - GHSA-r6q2-hw4h-h46w: Race Condition via Unicode Ligature Collisions
+      </description>
+      <impact>Build-time only risk - does not affect distributed application</impact>
+      <recommendation>
+        Monitor for updates to electron-builder that include fixed tar version.
+        This is an ecosystem-wide issue affecting many Electron apps.
+      </recommendation>
+    </finding>
+
+    <!-- Medium Severity -->
+    <finding severity="MEDIUM" id="SEC-003">
+      <title>Remote URL Not Validated in Git Add Remote</title>
+      <category>A03:2021 - Injection</category>
+      <location>electron/ipc/handlers.ts:1172</location>
+      <description>
+        The remoteUrl parameter in GIT_ADD_REMOTE handler is not validated.
+        While execFile prevents shell injection, a malicious URL could be set.
+      </description>
+      <impact>Could potentially redirect git operations to malicious servers</impact>
+      <recommendation>
+        Add URL validation to ensure only valid git URLs (https://, git@) are accepted.
+        Consider whitelist of allowed hosts (github.com, gitlab.com, etc.)
+      </recommendation>
+      <code-reference>
+        execFile('git', ['remote', 'add', remoteName, remoteUrl], ...)
+        // remoteUrl is passed directly without validation
+      </code-reference>
+    </finding>
+
+    <finding severity="MEDIUM" id="SEC-004">
+      <title>Commit Message Validation May Be Overly Restrictive</title>
+      <category>A03:2021 - Injection</category>
+      <location>electron/ipc/handlers.ts:1212</location>
+      <description>
+        The commit message validation blocks valid Unicode characters and common symbols.
+        While the intent is good (prevent injection), execFile already prevents shell injection.
+      </description>
+      <impact>User experience - some valid commit messages may be rejected</impact>
+      <recommendation>
+        Since execFile is used with shell:false (default), shell metacharacters are not interpreted.
+        Consider relaxing validation to allow more characters while keeping length limit.
+      </recommendation>
+      <code-reference>
+        if (!message || message.length > 500 || /[&amp;;|`$()[\]{}><\\]/.test(message)) {
+          return { success: false, error: 'Invalid commit message' };
+        }
+      </code-reference>
+    </finding>
+
+    <finding severity="MEDIUM" id="SEC-005">
+      <title>CSP Allows unsafe-inline for Scripts</title>
+      <category>A05:2021 - Security Misconfiguration</category>
+      <location>index.html:6</location>
+      <description>
+        The Content Security Policy includes 'unsafe-inline' for script-src.
+        This weakens XSS protection as inline scripts are allowed.
+      </description>
+      <impact>Reduces effectiveness of CSP against XSS attacks</impact>
+      <recommendation>
+        Remove 'unsafe-inline' and use nonces or hashes for necessary inline scripts.
+        Vite can be configured to add nonces automatically.
+      </recommendation>
+      <code-reference>
+        script-src 'self' 'unsafe-inline'
+      </code-reference>
+    </finding>
+
+    <!-- Low Severity -->
+    <finding severity="LOW" id="SEC-006">
+      <title>Polling Interval Memory Leak Potential</title>
+      <category>A04:2021 - Insecure Design</category>
+      <location>src/components/global/OnboardingWizard.tsx:108-144</location>
+      <description>
+        The authentication polling interval may not be cleared if the component unmounts
+        during the polling phase after auth starts but before timeout or completion.
+      </description>
+      <impact>Minor memory leak, could cause stale state updates</impact>
+      <recommendation>
+        Store interval ID in a ref and clear in cleanup effect.
+      </recommendation>
+    </finding>
+
+    <finding severity="LOW" id="SEC-007">
+      <title>Git Status Output Includes Raw File Paths</title>
+      <category>A01:2021 - Broken Access Control</category>
+      <location>electron/ipc/handlers.ts:1126</location>
+      <description>
+        The git status output includes full file paths in the changes array.
+        While not directly exploitable, it exposes file system structure.
+      </description>
+      <impact>Information disclosure - reveals directory structure</impact>
+      <recommendation>
+        Consider sanitizing or limiting the path information returned.
+        For display purposes, relative paths from project root are sufficient.
+      </recommendation>
+    </finding>
+  </findings>
+
+  <positive-findings>
+    <item>Electron contextIsolation enabled</item>
+    <item>Electron nodeIntegration disabled</item>
+    <item>All git commands use execFile with shell:false (default)</item>
+    <item>Path traversal protection via isPathAllowed()</item>
+    <item>Input validation on repo names and remote names</item>
+    <item>HTTPS used for GitHub API calls</item>
+    <item>No innerHTML or dangerouslySetInnerHTML usage</item>
+    <item>React elements used for content rendering (XSS safe)</item>
+    <item>CSP implemented (though with unsafe-inline)</item>
+    <item>Timeout limits on all git operations</item>
+  </positive-findings>
+
+  <owasp-checklist>
+    <item risk="A01:2021" status="PASS">Broken Access Control - Path validation implemented</item>
+    <item risk="A02:2021" status="WARN">Cryptographic Failures - Token storage in localStorage</item>
+    <item risk="A03:2021" status="PASS">Injection - execFile prevents shell injection</item>
+    <item risk="A04:2021" status="PASS">Insecure Design - Electron security best practices followed</item>
+    <item risk="A05:2021" status="WARN">Security Misconfiguration - CSP has unsafe-inline</item>
+    <item risk="A06:2021" status="WARN">Vulnerable Components - tar vulnerability (build-time only)</item>
+    <item risk="A07:2021" status="PASS">Auth Failures - OAuth flow properly implemented</item>
+    <item risk="A08:2021" status="PASS">Data Integrity - No deserialization issues found</item>
+    <item risk="A09:2021" status="PASS">Logging Failures - Errors properly handled</item>
+    <item risk="A10:2021" status="PASS">SSRF - No server-side requests from user input</item>
+  </owasp-checklist>
+</security-audit>

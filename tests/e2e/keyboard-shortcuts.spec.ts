@@ -30,12 +30,12 @@ test.describe('Keyboard Shortcuts', () => {
       await expect(input).not.toBeVisible();
     });
 
-    test('should navigate to Dashboard with Cmd+1', async ({ page }) => {
+    test('should navigate to Dashboard with Cmd+Shift+1', async ({ page }) => {
       // Close any open panels first
       await page.keyboard.press('Escape');
       await page.waitForTimeout(200);
 
-      await page.keyboard.press('Meta+1');
+      await page.keyboard.press('Meta+Shift+1');
       await page.waitForTimeout(300);
 
       const title = page.locator('.header-title');
@@ -43,11 +43,11 @@ test.describe('Keyboard Shortcuts', () => {
       expect(text?.toLowerCase()).toContain('dashboard');
     });
 
-    test('should navigate to Execution with Cmd+2', async ({ page }) => {
+    test('should navigate to Execution with Cmd+Shift+2', async ({ page }) => {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(200);
 
-      await page.keyboard.press('Meta+2');
+      await page.keyboard.press('Meta+Shift+2');
       await page.waitForTimeout(300);
 
       const title = page.locator('.header-title');
@@ -55,11 +55,11 @@ test.describe('Keyboard Shortcuts', () => {
       expect(text?.toLowerCase()).toContain('execution');
     });
 
-    test('should navigate to Tasks with Cmd+3', async ({ page }) => {
+    test('should navigate to Tasks with Cmd+Shift+3', async ({ page }) => {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(200);
 
-      await page.keyboard.press('Meta+3');
+      await page.keyboard.press('Meta+Shift+3');
       await page.waitForTimeout(300);
 
       const title = page.locator('.header-title');
@@ -67,11 +67,11 @@ test.describe('Keyboard Shortcuts', () => {
       expect(text?.toLowerCase()).toContain('task');
     });
 
-    test('should navigate to Prompts with Cmd+4', async ({ page }) => {
+    test('should navigate to Prompts with Cmd+Shift+4', async ({ page }) => {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(200);
 
-      await page.keyboard.press('Meta+4');
+      await page.keyboard.press('Meta+Shift+4');
       await page.waitForTimeout(300);
 
       const title = page.locator('.header-title');

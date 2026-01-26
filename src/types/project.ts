@@ -1,4 +1,17 @@
-export type ProjectStatus = 'idle' | 'running' | 'paused' | 'error';
+export type ProjectStatus = 'idle' | 'running' | 'paused' | 'error' | 'waiting';
+
+// Tab status color mapping
+export type TabStatusColor = 'green' | 'red' | 'blue' | 'gray';
+
+// Open project entry for tab system
+export interface OpenProject {
+  id: string;
+  name: string;
+  path: string;
+  status: ProjectStatus;
+  order: number;
+  openedAt: Date;
+}
 
 export interface Project {
   id: string;

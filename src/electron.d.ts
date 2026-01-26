@@ -52,6 +52,11 @@ interface ClaudeModelsResult {
   error?: string;
 }
 
+interface GitChange {
+  status: string;
+  path: string;
+}
+
 interface GitStatusResult {
   success: boolean;
   isRepo: boolean;
@@ -60,7 +65,7 @@ interface GitStatusResult {
   branch: string;
   ahead: number;
   behind: number;
-  changes: string[];
+  changes: GitChange[];
   error?: string;
 }
 

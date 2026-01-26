@@ -1,5 +1,6 @@
 import { useNavigationStore } from '@/stores';
 import { Header } from './Header';
+import { TabBar } from './TabBar';
 import {
   Dashboard,
   Execution,
@@ -52,6 +53,7 @@ export function MainContent() {
 
   return (
     <main className="main-content">
+      <TabBar />
       <Header />
       <div className="screen-container">
         {renderScreen()}

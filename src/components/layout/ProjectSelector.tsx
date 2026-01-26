@@ -4,7 +4,7 @@ import { StatusDot, Badge } from '@/components/ui';
 import { logger } from '@/utils/logger';
 
 export function ProjectSelector() {
-  const { currentProject, recentProjects, setCurrentProject } = useProjectStore();
+  const { currentProject, recentProjects, openProject } = useProjectStore();
   const [isOpen, setIsOpen] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -19,7 +19,7 @@ export function ProjectSelector() {
 
     const path = await window.electron.dialog.openDirectory();
     if (path) {
-      setCurrentProject({
+      openProject({
         id: Date.now().toString(),
         name: path.split('/').pop() || 'Project',
         path,
@@ -43,7 +43,7 @@ export function ProjectSelector() {
 
     if (!window.electron) {
       // For browser/demo mode, create a mock project
-      setCurrentProject({
+      openProject({
         id: Date.now().toString(),
         name: newProjectName,
         path: `/Users/me/Projects/${newProjectName}`,
@@ -62,7 +62,7 @@ export function ProjectSelector() {
       const result = await window.electron.project.create(newProjectName, basePath);
       logger.debug('[ProjectSelector] Result:', result);
       if (result.success && result.path) {
-        setCurrentProject({
+        openProject({
           id: Date.now().toString(),
           name: newProjectName,
           path: result.path,
@@ -102,7 +102,7 @@ export function ProjectSelector() {
                 key={project.id}
                 className="project-item"
                 onClick={() => {
-                  setCurrentProject(project);
+                  openProject(project);
                   setIsOpen(false);
                 }}
               >

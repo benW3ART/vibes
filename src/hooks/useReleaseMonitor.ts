@@ -103,7 +103,8 @@ export function useReleaseMonitor(): UseReleaseMonitorResult {
     if (shouldAutoRefresh) {
       refresh();
     }
-  }, []); // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount for initial check
+  }, []);
 
   // Dismiss a suggestion
   const dismissSuggestion = useCallback((id: string) => {

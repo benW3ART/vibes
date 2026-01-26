@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+interface GitChange {
+  status: string;
+  path: string;
+}
+
 interface GitStatus {
   isRepo: boolean;
   hasUncommitted: boolean;
@@ -7,7 +12,7 @@ interface GitStatus {
   branch: string;
   ahead: number;
   behind: number;
-  changes: string[];
+  changes: GitChange[];
 }
 
 interface UseGitStatusResult {

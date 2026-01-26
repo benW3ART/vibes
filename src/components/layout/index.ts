@@ -5,3 +5,4 @@ export { UserCard } from './UserCard';
 export { Header } from './Header';
 export { MainContent } from './MainContent';
 export { AmbientOrbs } from './AmbientOrbs';
+export { TabBar } from './TabBar';

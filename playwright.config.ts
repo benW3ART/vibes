@@ -15,6 +15,30 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Global storage state to bypass onboarding for all tests
+    storageState: {
+      cookies: [],
+      origins: [{
+        origin: 'http://localhost:5173',
+        localStorage: [
+          { name: 'vibes:hasSeenDemo', value: 'true' },
+          { name: 'vibes:chatPanelOpen', value: 'false' },
+          { name: 'vibes-connections', value: JSON.stringify({
+            state: {
+              connections: [{
+                id: 'claude-mock',
+                type: 'claude',
+                name: 'Claude',
+                status: 'connected',
+                lastConnected: new Date().toISOString(),
+              }],
+              isConnecting: null,
+            },
+            version: 0,
+          })},
+        ],
+      }],
+    },
   },
   projects: [
     {

@@ -122,10 +122,10 @@ export function GitHubSyncIndicator() {
             <ul className="change-list">
               {status.changes.slice(0, 10).map((change, i) => (
                 <li key={i} className="change-item">
-                  <span className={`change-status status-${change[0]?.toLowerCase()}`}>
-                    {change[0]}
+                  <span className={`change-status status-${change.status?.[0]?.toLowerCase()}`}>
+                    {change.status?.[0] || '?'}
                   </span>
-                  <span className="change-file">{change.slice(2).trim()}</span>
+                  <span className="change-file">{change.path}</span>
                 </li>
               ))}
               {status.changes.length > 10 && (

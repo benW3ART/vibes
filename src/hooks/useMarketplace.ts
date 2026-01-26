@@ -79,7 +79,8 @@ export function useMarketplace(): UseMarketplaceResult {
   // Initial fetch
   useEffect(() => {
     refreshSources();
-  }, []); // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount
+  }, []);
 
   // Install an item
   const installItem = useCallback(async (

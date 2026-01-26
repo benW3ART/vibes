@@ -71,6 +71,16 @@ export const useConnectionsStore = create<ConnectionsState>()(
     }),
     {
       name: 'vibes-connections',
+      // SEC-001 FIX: Exclude sensitive tokens from localStorage persistence
+      partialize: (state) => ({
+        connections: state.connections.map(c => ({
+          ...c,
+          metadata: c.type === 'github'
+            ? { username: (c.metadata as { username?: string })?.username } // Exclude accessToken
+            : c.metadata
+        })),
+        isConnecting: null,
+      }),
     }
   )
 );

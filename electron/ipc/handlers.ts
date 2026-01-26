@@ -1115,6 +1115,16 @@ State is stored in \`.genius/STATE.json\`.
             }, (unpulledErr, unpulledOut) => {
               const behind = unpulledErr ? 0 : parseInt(unpulledOut.trim()) || 0;
 
+              // SEC-007 FIX: Return only relative file paths, not full status output
+              const changesList = statusOut.trim()
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                  const status = line.substring(0, 2);
+                  const relativePath = line.substring(3);
+                  return { status, path: relativePath };
+                });
+
               resolve({
                 success: true,
                 isRepo: true,
@@ -1123,7 +1133,7 @@ State is stored in \`.genius/STATE.json\`.
                 branch,
                 ahead,
                 behind,
-                changes: statusOut.trim(),
+                changes: changesList,
               });
             });
           });
@@ -1168,6 +1178,20 @@ State is stored in \`.genius/STATE.json\`.
       return { success: false, error: 'Invalid remote name' };
     }
 
+    // SEC-003 FIX: Validate git remote URL format
+    const validGitUrlPatterns = [
+      /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\.git)?$/,
+      /^https:\/\/gitlab\.com\/[\w.-]+\/[\w.-]+(?:\.git)?$/,
+      /^https:\/\/bitbucket\.org\/[\w.-]+\/[\w.-]+(?:\.git)?$/,
+      /^git@github\.com:[\w.-]+\/[\w.-]+(?:\.git)?$/,
+      /^git@gitlab\.com:[\w.-]+\/[\w.-]+(?:\.git)?$/,
+      /^git@bitbucket\.org:[\w.-]+\/[\w.-]+(?:\.git)?$/,
+    ];
+
+    if (!validGitUrlPatterns.some(pattern => pattern.test(remoteUrl))) {
+      return { success: false, error: 'Invalid git URL format. Use HTTPS or SSH URLs from GitHub, GitLab, or Bitbucket.' };
+    }
+
     return new Promise((resolve) => {
       execFile('git', ['remote', 'add', remoteName, remoteUrl], {
         cwd: projectPath,
@@ -1208,9 +1232,13 @@ State is stored in \`.genius/STATE.json\`.
       return { success: false, error: 'Access denied' };
     }
 
-    // Validate commit message - prevent shell injection
-    if (!message || message.length > 500 || /[&;|`$()[\]{}><\\]/.test(message)) {
-      return { success: false, error: 'Invalid commit message' };
+    // SEC-004 FIX: Relaxed validation - execFile with shell:false is safe
+    // Only enforce length limit and require non-empty message
+    if (!message || message.trim().length === 0) {
+      return { success: false, error: 'Commit message is required' };
+    }
+    if (message.length > 500) {
+      return { success: false, error: 'Commit message too long (max 500 characters)' };
     }
 
     return new Promise((resolve) => {

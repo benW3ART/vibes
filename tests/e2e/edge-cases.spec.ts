@@ -117,7 +117,7 @@ test.describe('Edge Cases', () => {
       await page.waitForTimeout(500);
 
       // Rapid shortcuts
-      const shortcuts = ['Meta+1', 'Meta+2', 'Meta+3', 'Meta+4', 'Meta+k', 'Escape'];
+      const shortcuts = ['Meta+Shift+1', 'Meta+Shift+2', 'Meta+Shift+3', 'Meta+Shift+4', 'Meta+k', 'Escape'];
       for (const shortcut of shortcuts) {
         await page.keyboard.press(shortcut);
         await page.waitForTimeout(50);
