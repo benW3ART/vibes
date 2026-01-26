@@ -6,3 +6,5 @@ export { XRayPanel } from './XRayPanel';
 export { QuickActions } from './QuickActions';
 export { PanelOverlay } from './PanelOverlay';
 export { CommandPalette } from './CommandPalette';
+export { GitHubSyncIndicator } from './GitHubSyncIndicator';
+export { OnboardingWizard } from './OnboardingWizard';

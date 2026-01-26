@@ -82,6 +82,18 @@ contextBridge.exposeInMainWorld('electron', {
   github: {
     authStatus: () => ipcRenderer.invoke('github:auth:status'),
     authStart: () => ipcRenderer.invoke('github:auth:start'),
+    createRepo: (name: string, description: string, isPrivate: boolean, accessToken: string) =>
+      ipcRenderer.invoke('github:createRepo', name, description, isPrivate, accessToken),
+  },
+
+  // Git operations
+  git: {
+    status: (projectPath: string) => ipcRenderer.invoke('git:status', projectPath),
+    init: (projectPath: string) => ipcRenderer.invoke('git:init', projectPath),
+    addRemote: (projectPath: string, name: string, url: string) =>
+      ipcRenderer.invoke('git:addRemote', projectPath, name, url),
+    commitAndPush: (projectPath: string, message: string) =>
+      ipcRenderer.invoke('git:commitAndPush', projectPath, message),
   },
 
   // Environment

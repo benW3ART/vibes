@@ -52,6 +52,43 @@ interface ClaudeModelsResult {
   error?: string;
 }
 
+interface GitStatusResult {
+  success: boolean;
+  isRepo: boolean;
+  hasUncommitted: boolean;
+  hasUnpushed: boolean;
+  branch: string;
+  ahead: number;
+  behind: number;
+  changes: string[];
+  error?: string;
+}
+
+interface GitCommitPushResult {
+  success: boolean;
+  error?: string;
+  stage?: 'add' | 'commit' | 'push';
+  note?: string;
+}
+
+interface GitInitResult {
+  success: boolean;
+  error?: string;
+}
+
+interface GitAddRemoteResult {
+  success: boolean;
+  error?: string;
+}
+
+interface GitHubRepoResult {
+  success: boolean;
+  repoUrl?: string;
+  cloneUrl?: string;
+  sshUrl?: string;
+  error?: string;
+}
+
 interface ElectronAPI {
   claude: {
     spawn: (projectPath: string) => Promise<boolean>;
@@ -101,6 +138,18 @@ interface ElectronAPI {
       username?: string;
       error?: string;
     }>;
+    createRepo: (
+      name: string,
+      description: string,
+      isPrivate: boolean,
+      accessToken: string
+    ) => Promise<GitHubRepoResult>;
+  };
+  git: {
+    status: (projectPath: string) => Promise<GitStatusResult>;
+    init: (projectPath: string) => Promise<GitInitResult>;
+    addRemote: (projectPath: string, name: string, url: string) => Promise<GitAddRemoteResult>;
+    commitAndPush: (projectPath: string, message: string) => Promise<GitCommitPushResult>;
   };
   env: {
     get: (key: string) => Promise<string | null>;

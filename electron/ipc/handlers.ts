@@ -7,6 +7,8 @@ import { readFileContent, writeFileContent } from '../claude/fileReader';
 import { startGitHubOAuth, isGitHubOAuthConfigured } from '../oauth/github';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as https from 'https';
+import type { IncomingMessage } from 'http';
 import { spawn, ChildProcess, execFile } from 'child_process';
 
 let claudeBridge: ClaudeBridge | null = null;
@@ -985,6 +987,275 @@ State is stored in \`.genius/STATE.json\`.
           error: 'OAuth timed out. Please try again.',
         });
       }, 300000);
+    });
+  });
+
+  // GitHub create repo
+  ipcMain.handle(IPC_CHANNELS.GITHUB_CREATE_REPO, async (
+    _event,
+    name: string,
+    description: string,
+    isPrivate: boolean,
+    accessToken: string
+  ) => {
+    // Validate repo name
+    if (!/^[a-zA-Z0-9._-]{1,100}$/.test(name)) {
+      return { success: false, error: 'Invalid repository name' };
+    }
+
+    return new Promise((resolve) => {
+      const postData = JSON.stringify({
+        name,
+        description,
+        private: isPrivate,
+        auto_init: false,
+      });
+
+      const options = {
+        hostname: 'api.github.com',
+        path: '/user/repos',
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'User-Agent': 'vibes-app',
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+        },
+      };
+
+      const req = https.request(options, (res: IncomingMessage) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => (data += chunk.toString()));
+        res.on('end', () => {
+          try {
+            const result = JSON.parse(data);
+            if (res.statusCode && res.statusCode === 201) {
+              resolve({
+                success: true,
+                repoUrl: result.html_url,
+                cloneUrl: result.clone_url,
+                sshUrl: result.ssh_url,
+              });
+            } else {
+              resolve({
+                success: false,
+                error: result.message || 'Failed to create repository',
+              });
+            }
+          } catch {
+            resolve({ success: false, error: 'Failed to parse response' });
+          }
+        });
+      });
+
+      req.on('error', (err: Error) => {
+        resolve({ success: false, error: err.message });
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  });
+
+  // ============================================
+  // Git Operations
+  // ============================================
+
+  // Git status - check for uncommitted and unpushed changes
+  ipcMain.handle(IPC_CHANNELS.GIT_STATUS, async (_event, projectPath: string) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied', isRepo: false };
+    }
+
+    // Check if .git directory exists
+    const gitDir = path.join(projectPath, '.git');
+    if (!fs.existsSync(gitDir)) {
+      return { success: true, isRepo: false };
+    }
+
+    return new Promise((resolve) => {
+      // Get uncommitted changes
+      execFile('git', ['status', '--porcelain'], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10000,
+      }, (statusErr, statusOut) => {
+        if (statusErr) {
+          return resolve({
+            success: false,
+            error: 'Failed to get git status',
+            isRepo: true,
+          });
+        }
+
+        const hasUncommitted = statusOut.trim().length > 0;
+
+        // Get current branch
+        execFile('git', ['branch', '--show-current'], {
+          cwd: projectPath,
+          encoding: 'utf-8',
+          timeout: 5000,
+        }, (branchErr, branchOut) => {
+          const branch = branchErr ? 'main' : branchOut.trim() || 'main';
+
+          // Check for unpushed commits
+          execFile('git', ['rev-list', '--count', '@{u}..HEAD'], {
+            cwd: projectPath,
+            encoding: 'utf-8',
+            timeout: 5000,
+          }, (unpushedErr, unpushedOut) => {
+            const ahead = unpushedErr ? 0 : parseInt(unpushedOut.trim()) || 0;
+
+            // Check for unpulled commits
+            execFile('git', ['rev-list', '--count', 'HEAD..@{u}'], {
+              cwd: projectPath,
+              encoding: 'utf-8',
+              timeout: 5000,
+            }, (unpulledErr, unpulledOut) => {
+              const behind = unpulledErr ? 0 : parseInt(unpulledOut.trim()) || 0;
+
+              resolve({
+                success: true,
+                isRepo: true,
+                hasUncommitted,
+                hasUnpushed: ahead > 0,
+                branch,
+                ahead,
+                behind,
+                changes: statusOut.trim(),
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  // Git init
+  ipcMain.handle(IPC_CHANNELS.GIT_INIT, async (_event, projectPath: string) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied' };
+    }
+
+    return new Promise((resolve) => {
+      execFile('git', ['init'], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10000,
+      }, (err) => {
+        if (err) {
+          return resolve({ success: false, error: err.message });
+        }
+        resolve({ success: true });
+      });
+    });
+  });
+
+  // Git add remote
+  ipcMain.handle(IPC_CHANNELS.GIT_ADD_REMOTE, async (
+    _event,
+    projectPath: string,
+    remoteName: string,
+    remoteUrl: string
+  ) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied' };
+    }
+
+    // Validate remote name
+    if (!/^[a-zA-Z0-9_-]+$/.test(remoteName)) {
+      return { success: false, error: 'Invalid remote name' };
+    }
+
+    return new Promise((resolve) => {
+      execFile('git', ['remote', 'add', remoteName, remoteUrl], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10000,
+      }, (err) => {
+        if (err) {
+          // Check if remote already exists
+          if (err.message.includes('already exists')) {
+            // Update existing remote
+            execFile('git', ['remote', 'set-url', remoteName, remoteUrl], {
+              cwd: projectPath,
+              encoding: 'utf-8',
+              timeout: 10000,
+            }, (setErr) => {
+              if (setErr) {
+                return resolve({ success: false, error: setErr.message });
+              }
+              resolve({ success: true });
+            });
+          } else {
+            return resolve({ success: false, error: err.message });
+          }
+        } else {
+          resolve({ success: true });
+        }
+      });
+    });
+  });
+
+  // Git commit and push
+  ipcMain.handle(IPC_CHANNELS.GIT_COMMIT_AND_PUSH, async (
+    _event,
+    projectPath: string,
+    message: string
+  ) => {
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied' };
+    }
+
+    // Validate commit message - prevent shell injection
+    if (!message || message.length > 500 || /[&;|`$()[\]{}><\\]/.test(message)) {
+      return { success: false, error: 'Invalid commit message' };
+    }
+
+    return new Promise((resolve) => {
+      // Step 1: git add .
+      execFile('git', ['add', '.'], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 30000,
+      }, (addErr) => {
+        if (addErr) {
+          return resolve({ success: false, error: addErr.message, stage: 'add' });
+        }
+
+        // Step 2: git commit
+        execFile('git', ['commit', '-m', message], {
+          cwd: projectPath,
+          encoding: 'utf-8',
+          timeout: 30000,
+        }, (commitErr, commitOut) => {
+          // Check if nothing to commit
+          if (commitErr && commitErr.message.includes('nothing to commit')) {
+            // No changes to commit, try push anyway
+          } else if (commitErr) {
+            return resolve({ success: false, error: commitErr.message, stage: 'commit' });
+          }
+
+          // Step 3: git push
+          execFile('git', ['push', '-u', 'origin', 'HEAD'], {
+            cwd: projectPath,
+            encoding: 'utf-8',
+            timeout: 60000,
+          }, (pushErr) => {
+            if (pushErr) {
+              return resolve({
+                success: false,
+                error: pushErr.message,
+                stage: 'push',
+                note: commitOut ? 'Commit succeeded but push failed' : undefined,
+              });
+            }
+
+            resolve({ success: true, message: 'Committed and pushed successfully' });
+          });
+        });
+      });
     });
   });
 }

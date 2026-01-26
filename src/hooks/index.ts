@@ -7,3 +7,4 @@ export { useMCP } from './useMCP';
 export { useMemory } from './useMemory';
 export { useDemo } from './useDemo';
 export { useProjectFiles, useProjectArtifacts } from './useProjectFiles';
+export { useGitStatus } from './useGitStatus';

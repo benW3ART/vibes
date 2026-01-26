@@ -1,5 +1,5 @@
 import { Sidebar, MainContent, AmbientOrbs } from '@/components/layout';
-import { ExecutionBar, AssistantGuide, XRayPanel, PanelOverlay, CommandPalette } from '@/components/global';
+import { ExecutionBar, AssistantGuide, XRayPanel, PanelOverlay, CommandPalette, OnboardingWizard } from '@/components/global';
 import { ToastContainer } from '@/components/ui';
 import { useKeyboardShortcuts } from '@/hooks';
 import { DemoProvider } from '@/demo';
@@ -34,6 +34,7 @@ function App() {
         <PanelOverlay />
         <CommandPalette />
         <ToastContainer />
+        <OnboardingWizard />
       </div>
     </DemoProvider>
   );

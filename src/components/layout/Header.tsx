@@ -1,5 +1,6 @@
 import { useNavigationStore, useProjectStore } from '@/stores';
 import { Button, Badge } from '@/components/ui';
+import { GitHubSyncIndicator } from '@/components/global';
 import type { ScreenId } from '@/types';
 
 const screenTitles: Record<ScreenId, string> = {
@@ -35,6 +36,9 @@ export function Header() {
         {currentProject && (
           <Badge>{currentProject.name}</Badge>
         )}
+      </div>
+      <div className="header-center">
+        <GitHubSyncIndicator />
       </div>
       <div className="header-right">
         <Button variant="ghost" size="sm" onClick={toggleCommandPalette}>

@@ -3535,3 +3535,406 @@ a:focus-visible {
   display: block;
   margin-bottom: 12px;
 }
+
+/* ============================
+   Onboarding Wizard
+   ============================ */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.onboarding-wizard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 100%;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.onboarding-title {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+/* Progress indicator */
+.onboarding-progress {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.progress-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: calc(100% + 8px);
+  width: 24px;
+  height: 2px;
+  background: var(--border);
+}
+
+.progress-step.completed:not(:last-child)::after {
+  background: var(--success);
+}
+
+.progress-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-active);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.progress-step.active .progress-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #000;
+}
+
+.progress-step.completed .progress-dot {
+  background: var(--success);
+  border-color: var(--success);
+  color: #000;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.progress-step.active .progress-label {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Step content */
+.onboarding-step {
+  text-align: center;
+  padding: 24px;
+  background: var(--surface-active);
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.step-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.step-description {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.step-content {
+  margin-top: 16px;
+}
+
+.step-note {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.step-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.step-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--success);
+}
+
+.step-success .success-icon {
+  font-size: 1.25rem;
+}
+
+.step-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--error);
+  margin-bottom: 16px;
+}
+
+.onboarding-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+/* ============================
+   GitHub Sync Indicator
+   ============================ */
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.github-sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  background: var(--surface-active);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.sync-dot.synced {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.sync-dot.uncommitted {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.sync-dot.unpushed {
+  background: var(--info);
+  box-shadow: 0 0 8px var(--info);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.sync-branch {
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sync-ahead,
+.sync-behind {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.sync-ahead {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--info);
+}
+
+.sync-behind {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+.sync-button {
+  font-size: 0.75rem !important;
+  padding: 4px 12px !important;
+}
+
+.sync-refresh {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.sync-refresh:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sync-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sync-warning {
+  font-size: 0.7rem !important;
+}
+
+/* Commit Modal Content */
+.commit-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.commit-changes h4 {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.change-list {
+  list-style: none;
+  max-height: 150px;
+  overflow-y: auto;
+  background: var(--surface-active);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.change-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+.change-status {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.change-status.status-m {
+  background: rgba(234, 179, 8, 0.2);
+  color: var(--warning);
+}
+
+.change-status.status-a {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.change-status.status-d {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+.change-status.status-\? {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--info);
+}
+
+.change-file {
+  color: var(--text-muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.change-more {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  padding: 8px 4px 4px;
+}
+
+.commit-message-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commit-message-field label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.commit-message-field input {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.875rem;
+}
+
+.commit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}

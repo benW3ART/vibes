@@ -17,6 +17,12 @@ exports.IPC_CHANNELS = {
     // Renderer -> Main: GitHub
     GITHUB_AUTH_START: 'github:auth:start',
     GITHUB_AUTH_STATUS: 'github:auth:status',
+    GITHUB_CREATE_REPO: 'github:createRepo',
+    // Renderer -> Main: Git operations
+    GIT_STATUS: 'git:status',
+    GIT_COMMIT_AND_PUSH: 'git:commitAndPush',
+    GIT_INIT: 'git:init',
+    GIT_ADD_REMOTE: 'git:addRemote',
     // Renderer -> Main: File operations
     FILE_READ: 'file:read',
     FILE_WRITE: 'file:write',

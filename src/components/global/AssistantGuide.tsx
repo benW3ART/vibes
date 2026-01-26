@@ -20,7 +20,7 @@ export function AssistantGuide() {
   const { chatPanelOpen, toggleChatPanel, setChatPanelOpen, toggleXrayPanel } = useNavigationStore();
   const { currentProject, setCurrentProject } = useProjectStore();
   const { currentPhase, setPhase, completePhase, setConversationContext, conversationContext } = useWorkflowStore();
-  const { isClaudeConnected } = useConnectionsStore();
+  const { isClaudeConnected, isGitHubConnected, getConnection } = useConnectionsStore();
 
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
@@ -255,20 +255,24 @@ export function AssistantGuide() {
       await claudeService.init(project.path);
       aiWorkflowService.init(project.path);
 
-      // Start discovery phase with AI or guided mode
-      discoveryStep.current = 1;
-      aiWorkflowService.startPhase('discovery', { projectName: name });
-
-      if (isAIMode) {
-        // AI mode - let Claude drive the conversation
-        addAssistantMessage(`✅ **Project "${name}" created!** (demo mode)\n\nLet me help you define your project...`, undefined, true);
-        sendToAI(`I just created a new project called "${name}". Help me discover what this project should be about. Start by asking me to describe my project idea in one sentence.`);
-      } else {
-        // Guided mode - use templates
-        addAssistantMessage(
-          `✅ **Project "${name}" created!** (demo mode)\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A collaborative task management app for remote teams"*`
-        );
-      }
+      // Demo mode - show GitHub reminder and start discovery
+      addAssistantMessage(
+        `✅ **Project "${name}" created!** (demo mode)\n\n💡 *In the desktop app, you can connect GitHub to automatically create repositories for your projects.*`,
+        [
+          { label: 'Start Discovery', action: () => {
+            discoveryStep.current = 1;
+            aiWorkflowService.startPhase('discovery', { projectName: name });
+            if (isAIMode) {
+              addAssistantMessage(`Let me help you define your project...`, undefined, true);
+              sendToAI(`I just created a new project called "${name}". Help me discover what this project should be about. Start by asking me to describe my project idea in one sentence.`);
+            } else {
+              addAssistantMessage(
+                `Now, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A collaborative task management app for remote teams"*`
+              );
+            }
+          }, variant: 'primary' },
+        ]
+      );
       return;
     }
 
@@ -300,16 +304,14 @@ export function AssistantGuide() {
               discoveryStep.current = 1;
               aiWorkflowService.startPhase('discovery', { projectName: name });
 
-              if (isAIMode) {
-                // AI mode - let Claude drive the conversation
-                addAssistantMessage(`✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nLet me help you define your project...`, undefined, true);
-                sendToAI(`I just created a new project called "${name}" at ${result.path}. Help me discover what this project should be about. Start by asking me to describe my project idea in one sentence.`);
-              } else {
-                // Guided mode - use templates
-                addAssistantMessage(
-                  `✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nGenius Team structure initialized:\n- .claude/ (config & skills)\n- .genius/ (state)\n- CLAUDE.md\n\nNow, let's talk about your idea.\n\n**Question 1/5: Describe your project in one sentence.**\n\n*Example: "A task management app for remote teams"*`
-                );
-              }
+              // Ask about GitHub repo creation
+              addAssistantMessage(`✅ **Project "${name}" created!**\n\n📁 ${result.path}\n\nGenius Team structure initialized:\n- .claude/ (config & skills)\n- .genius/ (state)\n- CLAUDE.md`);
+
+              // Slight delay before asking about GitHub
+              const projectPath = result.path;
+              setTimeout(() => {
+                askGitHubRepo(projectPath, name);
+              }, 500);
             } else {
               addAssistantMessage(
                 `❌ **Error**: ${result.error}\n\nWould you like to try again?`,
@@ -321,6 +323,107 @@ export function AssistantGuide() {
         variant: 'primary',
       }]
     );
+  };
+
+  // Navigate to connections screen
+  const navigateToConnections = () => {
+    const { setScreen } = useNavigationStore.getState();
+    setScreen('connections');
+    toggleChatPanel();
+  };
+
+  // Helper function to create GitHub repo for a project
+  const createGitHubRepo = async (projectPath: string, projectName: string) => {
+    if (!window.electron) return;
+
+    const githubConnection = getConnection('github');
+    const accessToken = githubConnection?.metadata?.accessToken as string | undefined;
+
+    if (!accessToken) {
+      addAssistantMessage("❌ GitHub access token not found. Please reconnect GitHub.");
+      return;
+    }
+
+    addAssistantMessage("⏳ Creating GitHub repository...");
+
+    // Create the GitHub repo
+    const repoResult = await window.electron.github.createRepo(
+      projectName,
+      `Created with vibes`,
+      false, // public
+      accessToken
+    );
+
+    if (!repoResult.success) {
+      addAssistantMessage(
+        `❌ Failed to create GitHub repo: ${repoResult.error}`,
+        [{ label: 'Continue without GitHub', action: () => startDiscovery(), variant: 'secondary' }]
+      );
+      return;
+    }
+
+    // Initialize git in the project
+    const gitInitResult = await window.electron.git.init(projectPath);
+    if (!gitInitResult.success) {
+      addAssistantMessage(
+        `⚠️ GitHub repo created but git init failed: ${gitInitResult.error}\n\n📎 Repo URL: ${repoResult.repoUrl}`,
+        [{ label: 'Continue', action: () => startDiscovery(), variant: 'primary' }]
+      );
+      return;
+    }
+
+    // Add the remote
+    const addRemoteResult = await window.electron.git.addRemote(
+      projectPath,
+      'origin',
+      repoResult.cloneUrl || ''
+    );
+
+    if (!addRemoteResult.success) {
+      addAssistantMessage(
+        `⚠️ GitHub repo created but failed to add remote: ${addRemoteResult.error}\n\n📎 Repo URL: ${repoResult.repoUrl}`,
+        [{ label: 'Continue', action: () => startDiscovery(), variant: 'primary' }]
+      );
+      return;
+    }
+
+    // Initial commit and push
+    const commitResult = await window.electron.git.commitAndPush(projectPath, 'Initial commit - Created with vibes');
+
+    if (commitResult.success) {
+      addAssistantMessage(
+        `✅ **GitHub repo created and initialized!**\n\n📎 ${repoResult.repoUrl}\n\nYour project is now synced with GitHub.`,
+        [{ label: 'Start Discovery', action: () => startDiscovery(), variant: 'primary' }]
+      );
+    } else {
+      addAssistantMessage(
+        `✅ **GitHub repo created!**\n\n📎 ${repoResult.repoUrl}\n\n⚠️ Initial push: ${commitResult.note || commitResult.error || 'No files to commit yet'}`,
+        [{ label: 'Start Discovery', action: () => startDiscovery(), variant: 'primary' }]
+      );
+    }
+  };
+
+  // Ask user if they want to create a GitHub repo
+  const askGitHubRepo = (projectPath: string, projectName: string) => {
+    const githubConnected = isGitHubConnected();
+
+    if (githubConnected) {
+      addAssistantMessage(
+        `🐙 **Create GitHub Repository?**\n\nWould you like to create a GitHub repo for "${projectName}"?\n\nThis will:\n- Create a new public repository\n- Initialize git locally\n- Push the initial project files`,
+        [
+          { label: 'Create Repo', action: () => createGitHubRepo(projectPath, projectName), variant: 'primary' },
+          { label: 'Skip', action: () => startDiscovery(), variant: 'secondary' },
+        ]
+      );
+    } else {
+      addAssistantMessage(
+        `💡 **Connect GitHub**\n\nConnect GitHub to automatically create repositories for your projects.\n\nYou can configure this later in **Connections**.`,
+        [
+          { label: 'Start Discovery', action: () => startDiscovery(), variant: 'primary' },
+          { label: 'Connect GitHub', action: () => navigateToConnections(), variant: 'secondary' },
+        ]
+      );
+    }
   };
 
   const startDiscovery = () => {
@@ -570,12 +673,6 @@ export function AssistantGuide() {
         [{ label: 'Retry', action: () => startArchitecture(specsPath, designPath), variant: 'primary' }]
       );
     }
-  };
-
-  const navigateToConnections = () => {
-    const { setScreen } = useNavigationStore.getState();
-    setScreen('connections');
-    toggleChatPanel();
   };
 
   const startExecution = async () => {

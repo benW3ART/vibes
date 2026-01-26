@@ -44,6 +44,7 @@ const fileReader_1 = require("../claude/fileReader");
 const github_1 = require("../oauth/github");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const https = __importStar(require("https"));
 const child_process_1 = require("child_process");
 let claudeBridge = null;
 let fileWatcher = null;
@@ -926,6 +927,239 @@ State is stored in \`.genius/STATE.json\`.
                     error: 'OAuth timed out. Please try again.',
                 });
             }, 300000);
+        });
+    });
+    // GitHub create repo
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GITHUB_CREATE_REPO, async (_event, name, description, isPrivate, accessToken) => {
+        // Validate repo name
+        if (!/^[a-zA-Z0-9._-]{1,100}$/.test(name)) {
+            return { success: false, error: 'Invalid repository name' };
+        }
+        return new Promise((resolve) => {
+            const postData = JSON.stringify({
+                name,
+                description,
+                private: isPrivate,
+                auto_init: false,
+            });
+            const options = {
+                hostname: 'api.github.com',
+                path: '/user/repos',
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${accessToken}`,
+                    'User-Agent': 'vibes-app',
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                },
+            };
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => (data += chunk.toString()));
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(data);
+                        if (res.statusCode && res.statusCode === 201) {
+                            resolve({
+                                success: true,
+                                repoUrl: result.html_url,
+                                cloneUrl: result.clone_url,
+                                sshUrl: result.ssh_url,
+                            });
+                        }
+                        else {
+                            resolve({
+                                success: false,
+                                error: result.message || 'Failed to create repository',
+                            });
+                        }
+                    }
+                    catch {
+                        resolve({ success: false, error: 'Failed to parse response' });
+                    }
+                });
+            });
+            req.on('error', (err) => {
+                resolve({ success: false, error: err.message });
+            });
+            req.write(postData);
+            req.end();
+        });
+    });
+    // ============================================
+    // Git Operations
+    // ============================================
+    // Git status - check for uncommitted and unpushed changes
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GIT_STATUS, async (_event, projectPath) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied', isRepo: false };
+        }
+        // Check if .git directory exists
+        const gitDir = path.join(projectPath, '.git');
+        if (!fs.existsSync(gitDir)) {
+            return { success: true, isRepo: false };
+        }
+        return new Promise((resolve) => {
+            // Get uncommitted changes
+            (0, child_process_1.execFile)('git', ['status', '--porcelain'], {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 10000,
+            }, (statusErr, statusOut) => {
+                if (statusErr) {
+                    return resolve({
+                        success: false,
+                        error: 'Failed to get git status',
+                        isRepo: true,
+                    });
+                }
+                const hasUncommitted = statusOut.trim().length > 0;
+                // Get current branch
+                (0, child_process_1.execFile)('git', ['branch', '--show-current'], {
+                    cwd: projectPath,
+                    encoding: 'utf-8',
+                    timeout: 5000,
+                }, (branchErr, branchOut) => {
+                    const branch = branchErr ? 'main' : branchOut.trim() || 'main';
+                    // Check for unpushed commits
+                    (0, child_process_1.execFile)('git', ['rev-list', '--count', '@{u}..HEAD'], {
+                        cwd: projectPath,
+                        encoding: 'utf-8',
+                        timeout: 5000,
+                    }, (unpushedErr, unpushedOut) => {
+                        const ahead = unpushedErr ? 0 : parseInt(unpushedOut.trim()) || 0;
+                        // Check for unpulled commits
+                        (0, child_process_1.execFile)('git', ['rev-list', '--count', 'HEAD..@{u}'], {
+                            cwd: projectPath,
+                            encoding: 'utf-8',
+                            timeout: 5000,
+                        }, (unpulledErr, unpulledOut) => {
+                            const behind = unpulledErr ? 0 : parseInt(unpulledOut.trim()) || 0;
+                            resolve({
+                                success: true,
+                                isRepo: true,
+                                hasUncommitted,
+                                hasUnpushed: ahead > 0,
+                                branch,
+                                ahead,
+                                behind,
+                                changes: statusOut.trim(),
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+    // Git init
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GIT_INIT, async (_event, projectPath) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied' };
+        }
+        return new Promise((resolve) => {
+            (0, child_process_1.execFile)('git', ['init'], {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 10000,
+            }, (err) => {
+                if (err) {
+                    return resolve({ success: false, error: err.message });
+                }
+                resolve({ success: true });
+            });
+        });
+    });
+    // Git add remote
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GIT_ADD_REMOTE, async (_event, projectPath, remoteName, remoteUrl) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied' };
+        }
+        // Validate remote name
+        if (!/^[a-zA-Z0-9_-]+$/.test(remoteName)) {
+            return { success: false, error: 'Invalid remote name' };
+        }
+        return new Promise((resolve) => {
+            (0, child_process_1.execFile)('git', ['remote', 'add', remoteName, remoteUrl], {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 10000,
+            }, (err) => {
+                if (err) {
+                    // Check if remote already exists
+                    if (err.message.includes('already exists')) {
+                        // Update existing remote
+                        (0, child_process_1.execFile)('git', ['remote', 'set-url', remoteName, remoteUrl], {
+                            cwd: projectPath,
+                            encoding: 'utf-8',
+                            timeout: 10000,
+                        }, (setErr) => {
+                            if (setErr) {
+                                return resolve({ success: false, error: setErr.message });
+                            }
+                            resolve({ success: true });
+                        });
+                    }
+                    else {
+                        return resolve({ success: false, error: err.message });
+                    }
+                }
+                else {
+                    resolve({ success: true });
+                }
+            });
+        });
+    });
+    // Git commit and push
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GIT_COMMIT_AND_PUSH, async (_event, projectPath, message) => {
+        if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            return { success: false, error: 'Access denied' };
+        }
+        // Validate commit message - prevent shell injection
+        if (!message || message.length > 500 || /[&;|`$()[\]{}><\\]/.test(message)) {
+            return { success: false, error: 'Invalid commit message' };
+        }
+        return new Promise((resolve) => {
+            // Step 1: git add .
+            (0, child_process_1.execFile)('git', ['add', '.'], {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 30000,
+            }, (addErr) => {
+                if (addErr) {
+                    return resolve({ success: false, error: addErr.message, stage: 'add' });
+                }
+                // Step 2: git commit
+                (0, child_process_1.execFile)('git', ['commit', '-m', message], {
+                    cwd: projectPath,
+                    encoding: 'utf-8',
+                    timeout: 30000,
+                }, (commitErr, commitOut) => {
+                    // Check if nothing to commit
+                    if (commitErr && commitErr.message.includes('nothing to commit')) {
+                        // No changes to commit, try push anyway
+                    }
+                    else if (commitErr) {
+                        return resolve({ success: false, error: commitErr.message, stage: 'commit' });
+                    }
+                    // Step 3: git push
+                    (0, child_process_1.execFile)('git', ['push', '-u', 'origin', 'HEAD'], {
+                        cwd: projectPath,
+                        encoding: 'utf-8',
+                        timeout: 60000,
+                    }, (pushErr) => {
+                        if (pushErr) {
+                            return resolve({
+                                success: false,
+                                error: pushErr.message,
+                                stage: 'push',
+                                note: commitOut ? 'Commit succeeded but push failed' : undefined,
+                            });
+                        }
+                        resolve({ success: true, message: 'Committed and pushed successfully' });
+                    });
+                });
+            });
         });
     });
 }
