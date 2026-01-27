@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type ModelTier = 'auto' | 'opus' | 'sonnet' | 'haiku';
+
 interface SettingsState {
   theme: 'dark' | 'light' | 'system';
   fontSize: 'sm' | 'md' | 'lg';
@@ -10,7 +12,9 @@ interface SettingsState {
   soundEffects: boolean;
 
   // Claude settings (GLOBAL)
-  claudeModelId: string | null;
+  // Changed from claudeModelId to tier-based preference
+  preferredTier: ModelTier;
+  lastUsedModelId: string | null; // For upgrade detection
 
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   setFontSize: (size: 'sm' | 'md' | 'lg') => void;
@@ -18,7 +22,8 @@ interface SettingsState {
   setAutoSave: (enabled: boolean) => void;
   setNotifications: (enabled: boolean) => void;
   setSoundEffects: (enabled: boolean) => void;
-  setClaudeModelId: (modelId: string | null) => void;
+  setPreferredTier: (tier: ModelTier) => void;
+  setLastUsedModelId: (modelId: string | null) => void;
   resetSettings: () => void;
 }
 
@@ -29,7 +34,8 @@ const defaultSettings = {
   autoSave: true,
   notifications: true,
   soundEffects: false,
-  claudeModelId: null as string | null,
+  preferredTier: 'auto' as ModelTier,
+  lastUsedModelId: null as string | null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -43,11 +49,36 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoSave: (autoSave) => set({ autoSave }),
       setNotifications: (notifications) => set({ notifications }),
       setSoundEffects: (soundEffects) => set({ soundEffects }),
-      setClaudeModelId: (claudeModelId) => set({ claudeModelId }),
+      setPreferredTier: (preferredTier) => set({ preferredTier }),
+      setLastUsedModelId: (lastUsedModelId) => set({ lastUsedModelId }),
       resetSettings: () => set(defaultSettings),
     }),
     {
       name: 'vibes-settings',
+      // Migration: convert old claudeModelId to preferredTier
+      migrate: (persistedState: unknown, _version: number) => {
+        const state = persistedState as Record<string, unknown>;
+
+        // Migrate from old claudeModelId to preferredTier
+        if (state.claudeModelId && !state.preferredTier) {
+          const modelId = state.claudeModelId as string;
+          let tier: ModelTier = 'auto';
+
+          if (modelId.includes('opus')) tier = 'opus';
+          else if (modelId.includes('sonnet')) tier = 'sonnet';
+          else if (modelId.includes('haiku')) tier = 'haiku';
+
+          return {
+            ...state,
+            preferredTier: tier,
+            lastUsedModelId: modelId,
+            claudeModelId: undefined, // Remove old field
+          };
+        }
+
+        return state;
+      },
+      version: 1,
     }
   )
 );

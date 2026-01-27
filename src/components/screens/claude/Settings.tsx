@@ -1,7 +1,11 @@
-import { useSettingsStore } from '@/stores';
+import { useEffect } from 'react';
+import { useSettingsStore, type ModelTier } from '@/stores/settingsStore';
+import { useToastStore } from '@/stores';
 import { Toggle, Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
 import { QuickActions } from '@/components/global';
-import { useClaudeModels } from '@/hooks/useClaudeModels';
+import { useClaudeModels, TIER_DISPLAY_NAMES, formatVersion } from '@/hooks/useClaudeModels';
+
+const TIER_OPTIONS: ModelTier[] = ['auto', 'opus', 'sonnet', 'haiku'];
 
 export function Settings() {
   const {
@@ -11,18 +15,38 @@ export function Settings() {
     autoSave,
     notifications,
     soundEffects,
-    claudeModelId,
+    preferredTier,
     setTheme,
     setFontSize,
     setShowLineNumbers,
     setAutoSave,
     setNotifications,
     setSoundEffects,
-    setClaudeModelId,
+    setPreferredTier,
     resetSettings,
   } = useSettingsStore();
 
-  const { models, isLoading: modelsLoading, error: modelsError, refresh: refreshModels } = useClaudeModels();
+  const {
+    models,
+    selectedModel,
+    isLoading: modelsLoading,
+    error: modelsError,
+    isUpgraded,
+    upgradedFrom,
+    refresh: refreshModels,
+  } = useClaudeModels();
+
+  const addToast = useToastStore(state => state.addToast);
+
+  // Show upgrade notification
+  useEffect(() => {
+    if (isUpgraded && selectedModel) {
+      addToast(
+        `Upgraded to ${selectedModel.name}${selectedModel.version ? ` ${formatVersion(selectedModel.version)}` : ''}`,
+        'success'
+      );
+    }
+  }, [isUpgraded, selectedModel, addToast]);
 
   return (
     <div className="screen settings">
@@ -42,35 +66,77 @@ export function Settings() {
           <CardContent>
             <div className="settings-row">
               <div className="settings-label">
-                <span>Model</span>
+                <span>Model Tier</span>
                 <span className="settings-desc">
-                  Select Claude model for AI operations
+                  Select preferred model tier - automatically uses the latest version
                   {modelsError && <span className="settings-error"> (using defaults)</span>}
                 </span>
               </div>
               <select
                 className="settings-select"
-                value={claudeModelId || ''}
-                onChange={(e) => setClaudeModelId(e.target.value || null)}
+                value={preferredTier}
+                onChange={(e) => setPreferredTier(e.target.value as ModelTier)}
                 disabled={modelsLoading}
               >
-                <option value="">Auto (default)</option>
-                {models.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name} ({model.tier})
+                {TIER_OPTIONS.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {TIER_DISPLAY_NAMES[tier]}
                   </option>
                 ))}
               </select>
             </div>
-            {claudeModelId && (
+
+            {selectedModel && (
               <div className="settings-row">
                 <div className="settings-label">
-                  <span>Current Model ID</span>
-                  <span className="settings-desc">Exact model identifier being used</span>
+                  <span>Current Model</span>
+                  <span className="settings-desc">
+                    {isUpgraded && upgradedFrom && (
+                      <span className="settings-upgraded">
+                        Upgraded from {upgradedFrom}
+                      </span>
+                    )}
+                  </span>
                 </div>
-                <code className="settings-code">{claudeModelId}</code>
+                <div className="settings-model-info">
+                  <span className="settings-model-name">{selectedModel.name}</span>
+                  {selectedModel.version && (
+                    <Badge variant="info">v{formatVersion(selectedModel.version)}</Badge>
+                  )}
+                </div>
               </div>
             )}
+
+            {selectedModel && (
+              <div className="settings-row">
+                <div className="settings-label">
+                  <span>Model ID</span>
+                  <span className="settings-desc">Exact model identifier being used</span>
+                </div>
+                <code className="settings-code">{selectedModel.id}</code>
+              </div>
+            )}
+
+            {/* Show available models per tier */}
+            <div className="settings-row">
+              <div className="settings-label">
+                <span>Available Models</span>
+                <span className="settings-desc">{models.length} models detected</span>
+              </div>
+              <div className="settings-models-list">
+                {models.map((model) => (
+                  <div
+                    key={model.id}
+                    className={`settings-model-item ${model.id === selectedModel?.id ? 'active' : ''}`}
+                  >
+                    <span className="settings-model-tier">{model.tier}</span>
+                    <span className="settings-model-version">
+                      {model.version ? formatVersion(model.version) : model.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

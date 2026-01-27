@@ -1,9 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SectionTitle, Badge, Button, Card, CardHeader, CardTitle, CardContent, EmptyState, Modal } from '@/components/ui';
 import { QuickActions } from '@/components/global';
 import { useMarketplace } from '@/hooks/useMarketplace';
+import { useSourceSuggestions } from '@/hooks/useSourceSuggestions';
 import { useProjectStore, toast } from '@/stores';
+import { TRUST_LEVEL_CONFIG, type TrustLevel } from '@/services/githubSearchService';
 import type { MarketplaceItem } from '@/types/marketplace';
+
+// Trust badge component
+function TrustBadge({ level }: { level: TrustLevel }) {
+  const config = TRUST_LEVEL_CONFIG[level];
+  return (
+    <span
+      className="trust-badge"
+      style={{ color: config.color }}
+      title={config.label}
+    >
+      {config.icon} {config.label}
+    </span>
+  );
+}
 
 export function Marketplace() {
   const { currentProject } = useProjectStore();
@@ -20,6 +36,13 @@ export function Marketplace() {
     toggleSource,
   } = useMarketplace();
 
+  const {
+    suggestions,
+    isLoading: suggestionsLoading,
+    error: suggestionsError,
+    search: searchSuggestions,
+  } = useSourceSuggestions();
+
   const [filter, setFilter] = useState<'all' | 'skill' | 'mcp'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<MarketplaceItem | null>(null);
@@ -27,6 +50,12 @@ export function Marketplace() {
   const [showAddSourceModal, setShowAddSourceModal] = useState(false);
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [newSourceName, setNewSourceName] = useState('');
+  const [suggestionSearch, setSuggestionSearch] = useState('');
+
+  // Search suggestions when input changes
+  useEffect(() => {
+    searchSuggestions(suggestionSearch);
+  }, [suggestionSearch, searchSuggestions]);
 
   // Filter items
   const filteredItems = items.filter(item => {
@@ -38,6 +67,11 @@ export function Marketplace() {
   // Check if item is installed
   const isItemInstalled = (item: MarketplaceItem) => {
     return installed.some(i => i.itemId === item.id);
+  };
+
+  // Check if source already exists
+  const isSourceAdded = (fullName: string) => {
+    return sources.some(s => s.url.toLowerCase() === fullName.toLowerCase());
   };
 
   // Handle install
@@ -60,15 +94,16 @@ export function Marketplace() {
   };
 
   // Handle add source
-  const handleAddSource = () => {
-    if (!newSourceUrl.trim()) {
+  const handleAddSource = (url?: string, name?: string) => {
+    const sourceUrl = url || newSourceUrl.trim();
+    if (!sourceUrl) {
       toast.error('Please enter a GitHub repository URL');
       return;
     }
 
     addSource({
-      name: newSourceName || newSourceUrl.split('/').pop() || 'Custom Source',
-      url: newSourceUrl.replace('https://github.com/', ''),
+      name: name || newSourceName || sourceUrl.split('/').pop() || 'Custom Source',
+      url: sourceUrl.replace('https://github.com/', ''),
       type: 'custom',
       enabled: true,
     });
@@ -76,8 +111,14 @@ export function Marketplace() {
     setShowAddSourceModal(false);
     setNewSourceUrl('');
     setNewSourceName('');
+    setSuggestionSearch('');
     toast.success('Source added. Refreshing...');
     refreshSources();
+  };
+
+  // Handle add from suggestion
+  const handleAddFromSuggestion = (fullName: string, displayName: string) => {
+    handleAddSource(fullName, displayName);
   };
 
   return (
@@ -266,13 +307,96 @@ export function Marketplace() {
         </Modal>
       )}
 
-      {/* Add source modal */}
+      {/* Add source modal with suggestions */}
       <Modal
         isOpen={showAddSourceModal}
-        onClose={() => setShowAddSourceModal(false)}
+        onClose={() => {
+          setShowAddSourceModal(false);
+          setSuggestionSearch('');
+        }}
         title="Add Marketplace Source"
+        size="lg"
       >
         <div className="add-source-form">
+          {/* Search for suggestions */}
+          <div className="form-field">
+            <label>Search for sources</label>
+            <input
+              type="text"
+              placeholder="Search for MCP servers or skills..."
+              value={suggestionSearch}
+              onChange={(e) => setSuggestionSearch(e.target.value)}
+            />
+            <span className="form-hint">Search GitHub for popular MCP servers and skills</span>
+          </div>
+
+          {/* Suggestions list */}
+          <div className="suggestions-section">
+            <div className="suggestions-header">
+              <span>Suggested Sources</span>
+              {suggestionsLoading && <span className="suggestions-loading">Searching...</span>}
+            </div>
+
+            {suggestionsError && (
+              <div className="suggestions-error">
+                Could not load suggestions: {suggestionsError}
+              </div>
+            )}
+
+            <div className="suggestions-list">
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.fullName} className="suggestion-card">
+                  <div className="suggestion-header">
+                    <span className="suggestion-name">{suggestion.fullName}</span>
+                    <TrustBadge level={suggestion.trustLevel} />
+                  </div>
+                  <p className="suggestion-description">{suggestion.description}</p>
+                  <div className="suggestion-stats">
+                    <span className="suggestion-stat">
+                      <span className="stat-icon">⭐</span> {suggestion.stars.toLocaleString()}
+                    </span>
+                    <span className="suggestion-stat">
+                      <span className="stat-icon">🍴</span> {suggestion.forks.toLocaleString()}
+                    </span>
+                    {suggestion.language && (
+                      <span className="suggestion-stat">{suggestion.language}</span>
+                    )}
+                  </div>
+                  <div className="suggestion-action">
+                    {isSourceAdded(suggestion.fullName) ? (
+                      <Badge variant="success">Added</Badge>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleAddFromSuggestion(
+                          suggestion.fullName,
+                          suggestion.repo
+                        )}
+                      >
+                        Add Source
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {suggestions.length === 0 && !suggestionsLoading && (
+                <div className="suggestions-empty">
+                  {suggestionSearch
+                    ? 'No sources found. Try a different search term.'
+                    : 'Loading suggested sources...'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="form-divider">
+            <span>or add manually</span>
+          </div>
+
+          {/* Manual add */}
           <div className="form-field">
             <label>GitHub Repository</label>
             <input
@@ -296,7 +420,7 @@ export function Marketplace() {
             <Button variant="ghost" onClick={() => setShowAddSourceModal(false)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleAddSource}>
+            <Button variant="primary" onClick={() => handleAddSource()}>
               Add Source
             </Button>
           </div>

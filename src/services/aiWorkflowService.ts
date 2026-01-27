@@ -177,7 +177,8 @@ class AIWorkflowServiceClass {
 
   // Get selected model ID from global settings (or null for default)
   private getModelId(): string | undefined {
-    const modelId = useSettingsStore.getState().claudeModelId;
+    // Use lastUsedModelId which is updated by the useClaudeModels hook
+    const modelId = useSettingsStore.getState().lastUsedModelId;
     return modelId || undefined;
   }
 

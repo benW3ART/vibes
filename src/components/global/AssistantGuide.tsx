@@ -18,7 +18,7 @@ interface DisplayMessage {
 
 export function AssistantGuide() {
   const { chatPanelOpen, toggleChatPanel, setChatPanelOpen, toggleXrayPanel } = useNavigationStore();
-  const { currentProject, setCurrentProject } = useProjectStore();
+  const { currentProject, openProject } = useProjectStore();
   const { currentPhase, setPhase, completePhase, setConversationContext, conversationContext } = useWorkflowStore();
   const { isClaudeConnected, isGitHubConnected, getConnection } = useConnectionsStore();
 
@@ -226,7 +226,7 @@ export function AssistantGuide() {
         lastOpened: new Date(),
         createdAt: new Date(),
       };
-      setCurrentProject(project);
+      openProject(project);
 
       // Initialize Claude service for this project
       await claudeService.init(path);
@@ -252,7 +252,7 @@ export function AssistantGuide() {
         lastOpened: new Date(),
         createdAt: new Date(),
       };
-      setCurrentProject(project);
+      openProject(project);
       await claudeService.init(project.path);
       aiWorkflowService.init(project.path);
 
@@ -297,7 +297,7 @@ export function AssistantGuide() {
                 lastOpened: new Date(),
                 createdAt: new Date(),
               };
-              setCurrentProject(project);
+              openProject(project);
               await claudeService.init(result.path);
               aiWorkflowService.init(result.path);
 
@@ -428,12 +428,22 @@ export function AssistantGuide() {
   };
 
   const startDiscovery = () => {
+    // Read directly from store to avoid stale closures
+    const project = useProjectStore.getState().currentProject;
+
+    // Check if a project exists
+    if (!project?.path) {
+      addAssistantMessage(
+        "⚠️ **No project selected**\n\nPlease create a project first by telling me what you want to build, or click the **New Project** button in the sidebar."
+      );
+      return;
+    }
+
     setPhase('discovery');
     discoveryStep.current = 1;
 
-    const projectPath = currentProject?.path || '';
-    aiWorkflowService.init(projectPath);
-    aiWorkflowService.startPhase('discovery', { projectName: currentProject?.name || 'Project' });
+    aiWorkflowService.init(project.path);
+    aiWorkflowService.startPhase('discovery', { projectName: project.name || 'Project' });
 
     if (isAIMode) {
       // AI mode - let Claude drive the conversation
