@@ -105,12 +105,15 @@ interface ElectronAPI {
     queryCancel: () => Promise<boolean>;
     authStatus: () => Promise<ClaudeAuthStatus>;
     authLogin: () => Promise<{ success: boolean; error?: string }>;
+    authLoginStart: () => Promise<{ success: boolean; pid?: number; error?: string }>;
+    authLoginCancel: () => Promise<{ success: boolean; error?: string }>;
     models: () => Promise<ClaudeModelsResult>;
     onOutput: (callback: Listener) => Unsubscribe;
     onError: (callback: Listener) => Unsubscribe;
     onExit: (callback: Listener) => Unsubscribe;
     onStatus: (callback: Listener) => Unsubscribe;
     onQueryChunk: (callback: Listener) => Unsubscribe;
+    onAuthOutput: (callback: (event: { type: 'stdout' | 'stderr' | 'url' | 'exit' | 'error'; data?: string; code?: number }) => void) => Unsubscribe;
   };
   file: {
     read: (filePath: string) => Promise<string>;

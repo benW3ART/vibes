@@ -3,6 +3,7 @@ import { useConnectionsStore } from '@/stores';
 import { Button, Badge } from '@/components/ui';
 
 type OnboardingStep = 'claude' | 'github' | 'vercel' | 'complete';
+type ClaudeSetupState = 'checking' | 'not-installed' | 'installed' | 'authenticating' | 'authenticated';
 
 interface StepConfig {
   id: OnboardingStep;
@@ -36,25 +37,38 @@ const steps: StepConfig[] = [
   },
 ];
 
+const CLAUDE_DOWNLOAD_URL = 'https://claude.ai/download';
+
+const ONBOARDING_COMPLETE_KEY = 'vibes:onboardingComplete';
+
 export function OnboardingWizard() {
   const { isClaudeConnected, isGitHubConnected, addConnection, updateConnection, getConnection } = useConnectionsStore();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('claude');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  // Check localStorage on mount to persist onboarding completion
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(ONBOARDING_COMPLETE_KEY) === 'true';
+    }
+    return false;
+  });
 
-  // SEC-006 FIX: Track poll interval for cleanup
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Claude-specific state
+  const [claudeState, setClaudeState] = useState<ClaudeSetupState>('checking');
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Cleanup polling on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
       }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Cancel any running auth process
+      if (window.electron) {
+        window.electron.claude.authLoginCancel().catch(() => {});
       }
     };
   }, []);
@@ -70,19 +84,29 @@ export function OnboardingWizard() {
   useEffect(() => {
     if (claudeConnected && currentStep === 'claude') {
       setCurrentStep('github');
+      setClaudeState('authenticated');
     }
     if (githubConnected && currentStep === 'github') {
       setCurrentStep('vercel');
     }
   }, [claudeConnected, githubConnected, currentStep]);
 
-  // Check Claude connection on mount
+  // Check Claude installation and auth status on mount
   useEffect(() => {
     const checkClaude = async () => {
       if (typeof window !== 'undefined' && window.electron) {
         try {
           const status = await window.electron.claude.authStatus();
+
+          if (!status.installed) {
+            setClaudeState('not-installed');
+            return;
+          }
+
+          setClaudeState('installed');
+
           if (status.authenticated) {
+            setClaudeState('authenticated');
             const existing = getConnection('claude');
             if (existing) {
               updateConnection(existing.id, {
@@ -100,15 +124,59 @@ export function OnboardingWizard() {
             }
           }
         } catch {
-          // Ignore errors
+          setClaudeState('not-installed');
         }
       }
     };
     checkClaude();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount to check initial auth status
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount to check initial status
   }, []);
 
-  const handleConnectClaude = async () => {
+  // Auto-scroll terminal output
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [terminalOutput]);
+
+  const handleDownloadClaude = () => {
+    window.open(CLAUDE_DOWNLOAD_URL, '_blank');
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!window.electron) return;
+
+    setClaudeState('checking');
+    try {
+      const status = await window.electron.claude.authStatus();
+      if (!status.installed) {
+        setClaudeState('not-installed');
+      } else if (status.authenticated) {
+        setClaudeState('authenticated');
+        const existing = getConnection('claude');
+        if (existing) {
+          updateConnection(existing.id, {
+            status: 'connected',
+            lastConnected: new Date(),
+          });
+        } else {
+          addConnection({
+            type: 'claude',
+            name: 'Claude Code',
+            status: 'connected',
+            lastConnected: new Date(),
+            metadata: { version: status.version },
+          });
+        }
+      } else {
+        setClaudeState('installed');
+      }
+    } catch {
+      setClaudeState('not-installed');
+    }
+  };
+
+  const handleStartAuth = async () => {
     if (!window.electron) {
       setError('Electron not available. Run in desktop mode.');
       return;
@@ -116,57 +184,51 @@ export function OnboardingWizard() {
 
     setIsConnecting(true);
     setError(null);
+    setTerminalOutput([]);
+    setClaudeState('authenticating');
+
+    // Subscribe to auth output
+    unsubscribeRef.current = window.electron.claude.onAuthOutput((event) => {
+      if (event.type === 'stdout' || event.type === 'stderr') {
+        if (event.data) {
+          setTerminalOutput(prev => [...prev, event.data!]);
+        }
+      } else if (event.type === 'exit') {
+        // Check if auth succeeded
+        handleRefreshStatus();
+        setIsConnecting(false);
+      } else if (event.type === 'error') {
+        setError(event.data || 'Authentication failed');
+        setIsConnecting(false);
+        setClaudeState('installed');
+      }
+    });
 
     try {
-      // Start auth login (opens terminal)
-      await window.electron.claude.authLogin();
-
-      // Poll for auth status - store ref for cleanup
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const status = await window.electron.claude.authStatus();
-          if (status.authenticated) {
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-            setIsConnecting(false);
-
-            const existing = getConnection('claude');
-            if (existing) {
-              updateConnection(existing.id, {
-                status: 'connected',
-                lastConnected: new Date(),
-                metadata: { version: status.version },
-              });
-            } else {
-              addConnection({
-                type: 'claude',
-                name: 'Claude Code',
-                status: 'connected',
-                lastConnected: new Date(),
-                metadata: { version: status.version },
-              });
-            }
-          }
-        } catch {
-          // Keep polling
-        }
-      }, 2000);
-
-      // Timeout after 5 minutes - store ref for cleanup
-      timeoutRef.current = setTimeout(() => {
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
+      const result = await window.electron.claude.authLoginStart();
+      if (!result.success) {
+        setError(result.error || 'Failed to start authentication');
         setIsConnecting(false);
-        setError('Authentication timed out. Please try again.');
-      }, 300000);
+        setClaudeState('installed');
+      }
     } catch (err) {
-      setIsConnecting(false);
       setError(err instanceof Error ? err.message : 'Failed to start authentication');
+      setIsConnecting(false);
+      setClaudeState('installed');
     }
+  };
+
+  const handleCancelAuth = async () => {
+    if (window.electron) {
+      await window.electron.claude.authLoginCancel();
+    }
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    setIsConnecting(false);
+    setClaudeState('installed');
+    setTerminalOutput([]);
   };
 
   const handleConnectGitHub = async () => {
@@ -208,25 +270,27 @@ export function OnboardingWizard() {
     }
   };
 
-  const handleConnectVercel = () => {
-    // Vercel CLI-based auth would go here
-    // For now, skip to complete
+  // Helper to dismiss onboarding and persist to localStorage
+  const completeOnboarding = () => {
     setCurrentStep('complete');
     setDismissed(true);
+    localStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+  };
+
+  const handleConnectVercel = () => {
+    completeOnboarding();
   };
 
   const handleSkip = () => {
     if (currentStep === 'github') {
       setCurrentStep('vercel');
     } else if (currentStep === 'vercel') {
-      setCurrentStep('complete');
-      setDismissed(true);
+      completeOnboarding();
     }
   };
 
   const handleFinish = () => {
-    setCurrentStep('complete');
-    setDismissed(true);
+    completeOnboarding();
   };
 
   // Don't render if shouldn't show
@@ -236,6 +300,109 @@ export function OnboardingWizard() {
 
   const currentStepConfig = steps.find(s => s.id === currentStep);
   const stepIndex = steps.findIndex(s => s.id === currentStep);
+
+  const renderClaudeStep = () => {
+    if (claudeConnected || claudeState === 'authenticated') {
+      return (
+        <div className="step-success">
+          <span className="success-icon">✓</span>
+          <span>Claude Code connected successfully!</span>
+        </div>
+      );
+    }
+
+    if (claudeState === 'checking') {
+      return (
+        <div className="step-checking">
+          <div className="spinner" />
+          <span>Checking Claude Code installation...</span>
+        </div>
+      );
+    }
+
+    if (claudeState === 'not-installed') {
+      return (
+        <div className="step-not-installed">
+          <div className="install-message">
+            <span className="warning-icon">⚠️</span>
+            <p>Claude Code CLI is not installed on your system.</p>
+          </div>
+          <div className="install-instructions">
+            <p>To use vibes, you need to install Claude Code first:</p>
+            <ol>
+              <li>Click the button below to download Claude Code</li>
+              <li>Follow the installation instructions</li>
+              <li>Come back here and click "Check Again"</li>
+            </ol>
+          </div>
+          <div className="step-actions">
+            <Button variant="primary" onClick={handleDownloadClaude}>
+              Download Claude Code
+            </Button>
+            <Button variant="secondary" onClick={handleRefreshStatus}>
+              Check Again
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (claudeState === 'authenticating') {
+      return (
+        <div className="step-authenticating">
+          <div className="auth-message-container">
+            <div className="auth-icon">🔐</div>
+            <h3>Terminal Opened</h3>
+            <p>A Terminal window has been opened with the Claude authentication command.</p>
+            <ol className="auth-steps">
+              <li>Complete the authentication in the Terminal window</li>
+              <li>A browser will open for you to sign in to Claude</li>
+              <li>After signing in, return here and click the button below</li>
+            </ol>
+          </div>
+
+          {terminalOutput.length > 0 && (
+            <div className="terminal-output-small">
+              {terminalOutput.map((line, i) => (
+                <div key={i} className="terminal-line">{line}</div>
+              ))}
+            </div>
+          )}
+
+          <div className="step-actions">
+            <Button variant="primary" onClick={handleRefreshStatus}>
+              Check Connection
+            </Button>
+            <Button variant="ghost" onClick={handleCancelAuth}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // claudeState === 'installed' - show start auth button
+    return (
+      <div className="step-installed">
+        <div className="install-message success">
+          <span className="success-icon">✓</span>
+          <p>Claude Code CLI is installed!</p>
+        </div>
+        <p className="step-note">
+          Click below to authenticate. This will open a Terminal window where you can sign in to Claude.
+        </p>
+        <div className="step-actions">
+          <Button
+            variant="primary"
+            onClick={handleStartAuth}
+            disabled={isConnecting}
+          >
+            Authenticate with Claude
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="onboarding-overlay">
@@ -281,25 +448,7 @@ export function OnboardingWizard() {
             {/* Step-specific content */}
             {currentStep === 'claude' && (
               <div className="step-content">
-                {claudeConnected ? (
-                  <div className="step-success">
-                    <span className="success-icon">✓</span>
-                    <span>Claude Code connected successfully!</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="step-note">
-                      This will open a terminal window. Complete the authentication there, then return here.
-                    </p>
-                    <Button
-                      variant="primary"
-                      onClick={handleConnectClaude}
-                      disabled={isConnecting}
-                    >
-                      {isConnecting ? 'Waiting for authentication...' : 'Connect Claude Code'}
-                    </Button>
-                  </>
-                )}
+                {renderClaudeStep()}
               </div>
             )}
 

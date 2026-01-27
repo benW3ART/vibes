@@ -27,7 +27,14 @@ export function getGitHubConfig(): GitHubAuthConfig | null {
   const clientId = process.env.VITE_GITHUB_CLIENT_ID;
   const clientSecret = process.env.VITE_GITHUB_CLIENT_SECRET;
 
+  console.log('[GitHub OAuth] Checking config:', {
+    hasClientId: !!clientId,
+    hasClientSecret: !!clientSecret,
+    clientIdPrefix: clientId?.substring(0, 8),
+  });
+
   if (!clientId || !clientSecret) {
+    console.log('[GitHub OAuth] Missing credentials!');
     return null;
   }
 

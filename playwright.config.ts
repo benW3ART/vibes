@@ -23,6 +23,7 @@ export default defineConfig({
         localStorage: [
           { name: 'vibes:hasSeenDemo', value: 'true' },
           { name: 'vibes:chatPanelOpen', value: 'false' },
+          { name: 'vibes:onboardingComplete', value: 'true' },
           { name: 'vibes-connections', value: JSON.stringify({
             state: {
               connections: [{

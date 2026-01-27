@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Locator } from '@playwright/test';
 
 // Helper to close overlays
 async function closeOverlays(page: any) {
@@ -8,11 +8,34 @@ async function closeOverlays(page: any) {
     await page.waitForTimeout(300);
   }
 
+  // Close X-Ray panel if visible
+  const xrayCloseBtn = page.locator('.xray-panel button').filter({ hasText: 'X' });
+  if (await xrayCloseBtn.count() > 0 && await xrayCloseBtn.isVisible()) {
+    await xrayCloseBtn.click({ force: true });
+    await page.waitForTimeout(300);
+  }
+
   const panelOverlay = page.locator('.panel-overlay.visible');
   if (await panelOverlay.count() > 0) {
     await panelOverlay.click({ force: true });
     await page.waitForTimeout(300);
   }
+}
+
+// Helper to scroll element into view and click it using JavaScript
+async function scrollAndClick(locator: Locator) {
+  await locator.evaluate((el: HTMLElement) => {
+    el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    el.click();
+  });
+}
+
+// Helper to focus an input/textarea using JavaScript
+async function focusInput(locator: Locator) {
+  await locator.evaluate((el: HTMLElement) => {
+    el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    (el as HTMLInputElement | HTMLTextAreaElement).focus();
+  });
 }
 
 test.describe('Edge Cases', () => {
@@ -137,12 +160,12 @@ test.describe('Edge Cases', () => {
 
       // Start new project flow
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Enter very long project name
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('a'.repeat(100));
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -158,11 +181,11 @@ test.describe('Edge Cases', () => {
       await closeOverlays(page);
 
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('test-project-<>!@#$%^&*()');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -309,12 +332,12 @@ test.describe('Edge Cases', () => {
       await closeOverlays(page);
 
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Try to submit empty input
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
@@ -329,11 +352,11 @@ test.describe('Edge Cases', () => {
       await closeOverlays(page);
 
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('   ');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);

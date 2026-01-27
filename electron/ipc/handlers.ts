@@ -836,22 +836,59 @@ State is stored in \`.genius/STATE.json\`.
   // Claude Auth
   // ============================================
 
+  // Helper to get claude binary path
+  const getClaudePath = (): string => {
+    const homedir = process.env.HOME || '';
+    const possiblePaths = [
+      `${homedir}/.local/bin/claude`,
+      '/usr/local/bin/claude',
+      '/opt/homebrew/bin/claude',
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+    return 'claude'; // Fall back to PATH lookup
+  };
+
+  // Helper to build PATH
+  const getFullPath = (): string => {
+    const homedir = process.env.HOME || '';
+    const extraPaths = [
+      `${homedir}/.local/bin`,
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+    ].join(':');
+    return `${extraPaths}:${process.env.PATH || ''}`;
+  };
+
   ipcMain.handle(IPC_CHANNELS.CLAUDE_AUTH_STATUS, async () => {
     try {
+      const claudePath = getClaudePath();
+      const fullPath = getFullPath();
+      const execOptions = { encoding: 'utf-8' as const, timeout: 5000, env: { ...process.env, PATH: fullPath } };
+
       return new Promise((resolve) => {
-        execFile('claude', ['--version'], { encoding: 'utf-8', timeout: 5000 }, (error, stdout) => {
+        execFile(claudePath, ['--version'], execOptions, (error, stdout) => {
           if (error) {
             resolve({ installed: false, authenticated: false });
             return;
           }
 
-          // Check auth status
-          execFile('claude', ['auth', 'status'], { encoding: 'utf-8', timeout: 5000 }, (authError) => {
-            resolve({
-              installed: true,
-              authenticated: !authError,
-              version: stdout.trim()
-            });
+          const version = stdout.trim();
+
+          // Check if we can make a simple API call to verify authentication
+          // We look for the presence of auth/session data
+          // Claude Code stores session data that we can check
+          const sessionEnvDir = path.join(process.env.HOME || '', '.claude', 'session-env');
+          const hasSessionData = fs.existsSync(sessionEnvDir) &&
+            fs.readdirSync(sessionEnvDir).length > 0;
+
+          resolve({
+            installed: true,
+            authenticated: hasSessionData,
+            version,
           });
         });
       });
@@ -860,20 +897,59 @@ State is stored in \`.genius/STATE.json\`.
     }
   });
 
+  // Legacy handler - kept for compatibility but not used
   ipcMain.handle(IPC_CHANNELS.CLAUDE_AUTH_LOGIN, async () => {
+    return { success: false, error: 'Use CLAUDE_AUTH_LOGIN_START instead' };
+  });
+
+  // New auth flow - opens Terminal.app with the auth command
+  // This is the most reliable approach on macOS since Claude CLI requires a TTY
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_START, async () => {
     try {
-      const platform = process.platform;
-      if (platform === 'darwin') {
-        spawn('open', ['-a', 'Terminal', '--args', 'claude', 'auth', 'login']);
-      } else if (platform === 'linux') {
-        spawn('x-terminal-emulator', ['-e', 'claude', 'auth', 'login']);
-      } else if (platform === 'win32') {
-        spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', 'claude', 'auth', 'login']);
-      }
+      const claudePath = getClaudePath();
+
+      // Create a temporary script that runs claude auth login
+      const scriptContent = `#!/bin/bash
+echo "==================================="
+echo "  Claude Code Authentication"
+echo "==================================="
+echo ""
+echo "This will open a browser window for authentication."
+echo "After authenticating, return to vibes and click 'Check Connection'."
+echo ""
+${claudePath} auth login
+echo ""
+echo "Authentication complete! You can close this window."
+read -p "Press Enter to close..."
+`;
+
+      const scriptPath = path.join(process.env.HOME || '/tmp', '.vibes-auth-script.sh');
+      fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+
+      // Open Terminal.app with the script
+      execFile('open', ['-a', 'Terminal', scriptPath], (error) => {
+        if (error) {
+          mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_AUTH_OUTPUT, {
+            type: 'error',
+            data: 'Failed to open Terminal: ' + error.message,
+          });
+        } else {
+          mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_AUTH_OUTPUT, {
+            type: 'stdout',
+            data: 'Terminal opened. Please complete authentication in the Terminal window, then click "Check Connection" below.',
+          });
+        }
+      });
+
       return { success: true };
     } catch (error) {
       return { success: false, error: sanitizeError(error) };
     }
+  });
+
+  // Cancel handler - nothing to cancel with terminal approach
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_CANCEL, async () => {
+    return { success: true };
   });
 
   // ============================================

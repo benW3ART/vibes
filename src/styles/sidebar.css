@@ -9,8 +9,10 @@
 }
 
 .sidebar-header {
-  padding: 14px 16px;
+  /* Extra top padding to clear macOS traffic light buttons */
+  padding: 40px 16px 14px 16px;
   border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
 }
 
 .logo {

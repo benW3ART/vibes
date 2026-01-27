@@ -3,8 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const dotenv_1 = require("dotenv");
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
+// Load .env file from project root BEFORE other imports
+const envPath = path_1.default.join(__dirname, '..', '.env');
+console.log('[Main] Loading .env from:', envPath);
+const dotenvResult = (0, dotenv_1.config)({ path: envPath });
+console.log('[Main] Dotenv result:', dotenvResult.error ? dotenvResult.error.message : 'OK');
+console.log('[Main] VITE_GITHUB_CLIENT_ID:', process.env.VITE_GITHUB_CLIENT_ID ? 'SET' : 'NOT SET');
 const handlers_1 = require("./ipc/handlers");
 const github_1 = require("./oauth/github");
 let mainWindow = null;

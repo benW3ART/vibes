@@ -1,5 +1,14 @@
+import { config } from 'dotenv';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
+
+// Load .env file from project root BEFORE other imports
+const envPath = path.join(__dirname, '..', '.env');
+console.log('[Main] Loading .env from:', envPath);
+const dotenvResult = config({ path: envPath });
+console.log('[Main] Dotenv result:', dotenvResult.error ? dotenvResult.error.message : 'OK');
+console.log('[Main] VITE_GITHUB_CLIENT_ID:', process.env.VITE_GITHUB_CLIENT_ID ? 'SET' : 'NOT SET');
+
 import { setupIpcHandlers, cleanupIpc } from './ipc/handlers';
 import { handleGitHubCallback } from './oauth/github';
 

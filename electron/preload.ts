@@ -15,7 +15,14 @@ contextBridge.exposeInMainWorld('electron', {
     queryCancel: () => ipcRenderer.invoke('claude:query:cancel'),
     authStatus: () => ipcRenderer.invoke('claude:auth:status'),
     authLogin: () => ipcRenderer.invoke('claude:auth:login'),
+    authLoginStart: () => ipcRenderer.invoke('claude:auth:login:start'),
+    authLoginCancel: () => ipcRenderer.invoke('claude:auth:login:cancel'),
     models: () => ipcRenderer.invoke('claude:models'),
+    onAuthOutput: (callback: Listener) => {
+      const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
+      ipcRenderer.on('claude:auth:output', handler);
+      return () => ipcRenderer.removeListener('claude:auth:output', handler);
+    },
     onOutput: (callback: Listener) => {
       const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
       ipcRenderer.on('claude:output', handler);

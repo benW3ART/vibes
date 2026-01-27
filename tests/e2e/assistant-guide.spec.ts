@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Locator } from '@playwright/test';
 
 // Helper to close any visible overlays (both panel overlay and command palette)
 async function closeAllOverlays(page: any) {
@@ -9,12 +9,36 @@ async function closeAllOverlays(page: any) {
     await page.waitForTimeout(300);
   }
 
+  // Close X-Ray panel if visible
+  const xrayCloseBtn = page.locator('.xray-panel button').filter({ hasText: 'X' });
+  if (await xrayCloseBtn.count() > 0 && await xrayCloseBtn.isVisible()) {
+    await xrayCloseBtn.click({ force: true });
+    await page.waitForTimeout(300);
+  }
+
   // Close panel overlay if visible
   const panelOverlay = page.locator('.panel-overlay.visible');
   if (await panelOverlay.count() > 0) {
     await panelOverlay.click({ force: true });
     await page.waitForTimeout(300);
   }
+}
+
+// Helper to scroll element into view and click it using JavaScript
+async function scrollAndClick(locator: Locator) {
+  // Use JavaScript to ensure the click works even when element is in a tricky position
+  await locator.evaluate((el: HTMLElement) => {
+    el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    el.click();
+  });
+}
+
+// Helper to focus an input/textarea using JavaScript
+async function focusInput(locator: Locator) {
+  await locator.evaluate((el: HTMLElement) => {
+    el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    (el as HTMLInputElement | HTMLTextAreaElement).focus();
+  });
 }
 
 test.describe('AssistantGuide Workflow', () => {
@@ -71,10 +95,10 @@ test.describe('AssistantGuide Workflow', () => {
       await page.waitForTimeout(2000);
       await closeAllOverlays(page);
 
-      // Click "New Project" button (use force to bypass any overlay)
+      // Click "New Project" button (scroll into view first)
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
       await expect(newProjectBtn).toBeVisible({ timeout: 5000 });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
 
       // Wait for the new message to appear (typing indicator + actual message)
       await page.waitForTimeout(2000);
@@ -92,12 +116,12 @@ test.describe('AssistantGuide Workflow', () => {
 
       // Start new project flow
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Type project name in textarea and press Enter
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('test-project');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(3000);
@@ -115,12 +139,12 @@ test.describe('AssistantGuide Workflow', () => {
 
       // Start new project
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Enter project name using keyboard
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('my-saas-app');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(3000);
@@ -140,12 +164,12 @@ test.describe('AssistantGuide Workflow', () => {
 
       // Start new project
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Create project using keyboard
       const chatInput = page.locator('.assistant-panel textarea');
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('test-discovery');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(3000);
@@ -155,7 +179,7 @@ test.describe('AssistantGuide Workflow', () => {
       const chatInput = page.locator('.assistant-panel textarea');
 
       // Answer question 1 - Project idea using keyboard
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('A task management app for remote teams');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -166,7 +190,7 @@ test.describe('AssistantGuide Workflow', () => {
       expect(count).toBeGreaterThanOrEqual(1);
 
       // Answer question 2 - Target users
-      await chatInput.click({ force: true });
+      await focusInput(chatInput);
       await chatInput.fill('Remote workers, project managers, team leads');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -188,7 +212,7 @@ test.describe('AssistantGuide Workflow', () => {
       ];
 
       for (const answer of answers) {
-        await chatInput.click({ force: true });
+        await focusInput(chatInput);
         await chatInput.fill(answer);
         await page.keyboard.press('Enter');
         await page.waitForTimeout(1500);
@@ -276,7 +300,7 @@ test.describe('AssistantGuide Workflow', () => {
 
       // Start interaction to generate messages
       const newProjectBtn = page.locator('.chat-message-actions button').filter({ hasText: 'New Project' });
-      await newProjectBtn.click({ force: true });
+      await scrollAndClick(newProjectBtn);
       await page.waitForTimeout(2000);
 
       // Should have at least one message (welcome)

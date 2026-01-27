@@ -13,6 +13,8 @@ exports.IPC_CHANNELS = {
     CLAUDE_QUERY_CANCEL: 'claude:query:cancel',
     CLAUDE_AUTH_STATUS: 'claude:auth:status',
     CLAUDE_AUTH_LOGIN: 'claude:auth:login',
+    CLAUDE_AUTH_LOGIN_START: 'claude:auth:login:start',
+    CLAUDE_AUTH_LOGIN_CANCEL: 'claude:auth:login:cancel',
     CLAUDE_MODELS: 'claude:models',
     // Renderer -> Main: GitHub
     GITHUB_AUTH_START: 'github:auth:start',
@@ -58,6 +60,7 @@ exports.IPC_CHANNELS = {
     CLAUDE_EXIT: 'claude:exit',
     CLAUDE_STATUS: 'claude:status',
     CLAUDE_QUERY_CHUNK: 'claude:query:chunk',
+    CLAUDE_AUTH_OUTPUT: 'claude:auth:output',
     FILE_CHANGED: 'file:changed',
     MCP_OUTPUT: 'mcp:output',
     SHELL_OUTPUT: 'shell:output',

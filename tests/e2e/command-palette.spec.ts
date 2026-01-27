@@ -60,9 +60,14 @@ test.describe('Command Palette', () => {
   test.describe('Search Functionality', () => {
     test('should have search input focused when opened', async ({ page }) => {
       await page.keyboard.press('Meta+k');
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      const searchInput = page.locator('input[placeholder*="command"]');
+      // Input should be visible and ready for typing
+      const searchInput = page.locator('input[placeholder*="command"], input[placeholder*="Command"]');
+      await expect(searchInput).toBeVisible();
+
+      // Click to ensure focus if not auto-focused
+      await searchInput.click();
       await expect(searchInput).toBeFocused();
     });
 

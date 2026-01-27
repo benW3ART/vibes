@@ -13,7 +13,14 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         queryCancel: () => electron_1.ipcRenderer.invoke('claude:query:cancel'),
         authStatus: () => electron_1.ipcRenderer.invoke('claude:auth:status'),
         authLogin: () => electron_1.ipcRenderer.invoke('claude:auth:login'),
+        authLoginStart: () => electron_1.ipcRenderer.invoke('claude:auth:login:start'),
+        authLoginCancel: () => electron_1.ipcRenderer.invoke('claude:auth:login:cancel'),
         models: () => electron_1.ipcRenderer.invoke('claude:models'),
+        onAuthOutput: (callback) => {
+            const handler = (_event, ...args) => callback(...args);
+            electron_1.ipcRenderer.on('claude:auth:output', handler);
+            return () => electron_1.ipcRenderer.removeListener('claude:auth:output', handler);
+        },
         onOutput: (callback) => {
             const handler = (_event, ...args) => callback(...args);
             electron_1.ipcRenderer.on('claude:output', handler);
