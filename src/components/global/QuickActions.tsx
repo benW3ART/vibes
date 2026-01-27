@@ -316,6 +316,17 @@ const createActions = (
   environment: [],
   marketplace: [],
   updates: [],
+  'phase-detail': [
+    {
+      label: 'Open Assistant',
+      icon: '💬',
+      variant: 'primary',
+      action: () => {
+        toggleChatPanel();
+        toast.info('Continue this phase in the assistant');
+      }
+    },
+  ],
 });
 
 export function QuickActions() {

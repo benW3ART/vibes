@@ -4,6 +4,8 @@ export type ScreenId =
   | 'execution'
   | 'tasks'
   | 'prompts'
+  // Discovery (workflow phases)
+  | 'phase-detail'
   // .claude
   | 'plan'
   | 'skills'

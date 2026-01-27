@@ -1,0 +1,115 @@
+.phase-detail-screen {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.phase-detail-header {
+  margin-bottom: 32px;
+}
+
+.phase-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.phase-detail-icon {
+  font-size: 32px;
+}
+
+.phase-detail-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.phase-detail-description {
+  color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0;
+}
+
+.phase-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.phase-detail-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.phase-section-card {
+  padding: 20px;
+}
+
+.phase-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px 0;
+}
+
+.phase-section-content {
+  font-size: 15px;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.phase-artifact-card {
+  padding: 20px;
+}
+
+.phase-artifact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.phase-artifact-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.phase-artifact-content {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.phase-artifact-content code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--text-primary);
+}
+
+.phase-artifact-loading,
+.phase-artifact-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+}
+
+.phase-detail-actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}

@@ -32,6 +32,8 @@ export function Connections() {
     addConnection,
     removeConnection,
     setConnecting,
+    clearGitHubToken,
+    saveGitHubToken,
   } = useConnectionsStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -213,7 +215,10 @@ export function Connections() {
       const result = await window.electron.github.authStart();
       setAuthPollingMessage(null);
 
-      if (result.success) {
+      if (result.success && result.accessToken) {
+        // Save token securely using Electron's safeStorage
+        await saveGitHubToken(result.accessToken, result.username || 'unknown');
+
         addConnection({
           type: 'github',
           name: 'GitHub',
@@ -246,7 +251,12 @@ export function Connections() {
     }
   };
 
-  const handleDisconnect = (id: string) => {
+  const handleDisconnect = async (id: string) => {
+    // Check if this is a GitHub connection and clear secure token
+    const connection = connections.find(c => c.id === id);
+    if (connection?.type === 'github') {
+      await clearGitHubToken();
+    }
     removeConnection(id);
     toast.success('Disconnected successfully');
   };

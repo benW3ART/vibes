@@ -21,6 +21,7 @@ import {
   Connections,
   Environment,
   Updates,
+  PhaseDetail,
 } from '@/components/screens';
 
 export function MainContent() {
@@ -32,6 +33,7 @@ export function MainContent() {
       case 'execution': return <Execution />;
       case 'tasks': return <Tasks />;
       case 'prompts': return <Prompts />;
+      case 'phase-detail': return <PhaseDetail />;
       case 'plan': return <Plan />;
       case 'skills': return <Skills />;
       case 'mcp': return <MCP />;

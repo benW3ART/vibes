@@ -8,6 +8,7 @@ const screenTitles: Record<ScreenId, string> = {
   execution: 'Execution',
   tasks: 'Tasks',
   prompts: 'Prompts',
+  'phase-detail': 'Phase Details',
   plan: 'Plan',
   skills: 'Skills',
   mcp: 'MCP Servers',

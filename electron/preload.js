@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
+console.log('[Preload] Electron bridge initializing...');
 electron_1.contextBridge.exposeInMainWorld('electron', {
     // Claude process
     claude: {
@@ -84,6 +85,10 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         authStatus: () => electron_1.ipcRenderer.invoke('github:auth:status'),
         authStart: () => electron_1.ipcRenderer.invoke('github:auth:start'),
         createRepo: (name, description, isPrivate, accessToken) => electron_1.ipcRenderer.invoke('github:createRepo', name, description, isPrivate, accessToken),
+        // Secure token storage (encrypted with OS keychain)
+        saveToken: (token, username) => electron_1.ipcRenderer.invoke('github:token:save', token, username),
+        loadToken: () => electron_1.ipcRenderer.invoke('github:token:load'),
+        clearToken: () => electron_1.ipcRenderer.invoke('github:token:clear'),
     },
     // Git operations
     git: {
@@ -119,3 +124,14 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         create: (name, path) => electron_1.ipcRenderer.invoke('project:create', name, path),
     },
 });
+// Load GitHub token on startup
+electron_1.ipcRenderer.invoke('github:token:load')
+    .then((result) => {
+    if (result.success) {
+        console.log('[Preload] GitHub token loaded for user:', result.username);
+    }
+})
+    .catch(() => {
+    // Ignore errors - token may not exist yet
+});
+console.log('[Preload] Electron bridge ready');

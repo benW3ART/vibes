@@ -166,18 +166,29 @@ function setupIpcHandlers(mainWindow) {
     let queryBridge = null;
     // Claude query (one-shot for conversational AI)
     electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.CLAUDE_QUERY, async (_event, projectPath, prompt, systemPrompt, modelId) => {
+        console.log('[Claude Query] Received query request');
+        console.log('[Claude Query] Project path:', projectPath);
+        console.log('[Claude Query] Prompt length:', prompt?.length || 0);
+        console.log('[Claude Query] Has system prompt:', !!systemPrompt);
+        console.log('[Claude Query] Model ID:', modelId || 'default');
         // Validate project path
         if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+            console.log('[Claude Query] Access denied - path not in allowed paths');
+            console.log('[Claude Query] Allowed paths:', Array.from(allowedProjectPaths));
             return { success: false, error: 'Access denied: path outside allowed directories' };
         }
+        console.log('[Claude Query] Path validated OK');
         // Cancel any existing query
         if (queryBridge) {
+            console.log('[Claude Query] Cancelling existing query');
             queryBridge.cancelQuery();
             queryBridge = null;
         }
         // Create bridge for this query
+        console.log('[Claude Query] Creating ClaudeBridge...');
         queryBridge = new bridge_1.ClaudeBridge({ projectPath });
         try {
+            console.log('[Claude Query] Starting query...');
             const result = await queryBridge.query({
                 prompt,
                 systemPrompt,
@@ -187,10 +198,12 @@ function setupIpcHandlers(mainWindow) {
                     mainWindow.webContents.send(channels_1.IPC_CHANNELS.CLAUDE_QUERY_CHUNK, chunk);
                 },
             });
+            console.log('[Claude Query] Query completed:', { success: result.success, responseLength: result.response?.length || 0, error: result.error });
             queryBridge = null;
             return result;
         }
         catch (error) {
+            console.error('[Claude Query] Query error:', error);
             queryBridge = null;
             return { success: false, error: sanitizeError(error) };
         }
@@ -370,6 +383,62 @@ State is stored in \`.genius/STATE.json\`.
             fs.writeFileSync(path.join(claudeDir, 'settings.json'), JSON.stringify(settingsJson, null, 2));
             // Create plan.md placeholder
             fs.writeFileSync(path.join(claudeDir, 'plan.md'), `# ${name} — Execution Plan\n\n**Project:** ${name}\n\n---\n\n*Run genius-architect to generate the execution plan.*\n`);
+            // Copy initial skills, agents, and commands from template
+            // The template is located in the vibes app's .claude directory
+            const appRoot = electron_1.app.getAppPath();
+            const templateClaudeDir = path.join(appRoot, '.claude');
+            console.log('[Project Create] Copying template files from:', templateClaudeDir);
+            // Helper function to recursively copy directory
+            const copyDir = (src, dest) => {
+                if (!fs.existsSync(src)) {
+                    console.log('[Project Create] Template source not found:', src);
+                    return;
+                }
+                fs.mkdirSync(dest, { recursive: true });
+                const entries = fs.readdirSync(src, { withFileTypes: true });
+                for (const entry of entries) {
+                    const srcPath = path.join(src, entry.name);
+                    const destPath = path.join(dest, entry.name);
+                    if (entry.isDirectory()) {
+                        copyDir(srcPath, destPath);
+                    }
+                    else if (entry.isFile()) {
+                        fs.copyFileSync(srcPath, destPath);
+                        console.log('[Project Create] Copied:', entry.name);
+                    }
+                }
+            };
+            // Copy essential skills
+            const essentialSkills = [
+                'genius-team',
+                'genius-interviewer',
+                'genius-specs',
+                'genius-designer',
+                'genius-architect',
+                'genius-product-market-analyst',
+                'genius-onboarding',
+                'genius-orchestrator',
+                'genius-memory',
+            ];
+            const templateSkillsDir = path.join(templateClaudeDir, 'skills');
+            const destSkillsDir = path.join(claudeDir, 'skills');
+            for (const skill of essentialSkills) {
+                const skillSrc = path.join(templateSkillsDir, skill);
+                const skillDest = path.join(destSkillsDir, skill);
+                if (fs.existsSync(skillSrc)) {
+                    copyDir(skillSrc, skillDest);
+                    console.log('[Project Create] Copied skill:', skill);
+                }
+            }
+            // Copy all agents
+            const templateAgentsDir = path.join(templateClaudeDir, 'agents');
+            const destAgentsDir = path.join(claudeDir, 'agents');
+            copyDir(templateAgentsDir, destAgentsDir);
+            // Copy all commands
+            const templateCommandsDir = path.join(templateClaudeDir, 'commands');
+            const destCommandsDir = path.join(claudeDir, 'commands');
+            copyDir(templateCommandsDir, destCommandsDir);
+            console.log('[Project Create] Template files copied successfully');
             return { success: true, path: projectPath };
         }
         catch (error) {
@@ -1050,6 +1119,64 @@ read -p "Press Enter to close..."
             req.write(postData);
             req.end();
         });
+    });
+    // ============================================
+    // GitHub Token Storage (Secure)
+    // Uses Electron's safeStorage to encrypt tokens with OS keychain
+    // ============================================
+    const tokenPath = path.join(electron_1.app.getPath('userData'), '.github-token');
+    const getTokenPath = () => tokenPath;
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GITHUB_TOKEN_SAVE, async (_event, token, username) => {
+        try {
+            if (!electron_1.safeStorage.isEncryptionAvailable()) {
+                return { success: false, error: 'Encryption not available on this system' };
+            }
+            const data = JSON.stringify({ token, username, savedAt: Date.now() });
+            const encrypted = electron_1.safeStorage.encryptString(data);
+            fs.writeFileSync(getTokenPath(), encrypted);
+            console.log('[GitHub Token] Saved for user:', username);
+            return { success: true };
+        }
+        catch (error) {
+            console.error('[GitHub Token] Error saving:', error);
+            return { success: false, error: sanitizeError(error) };
+        }
+    });
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GITHUB_TOKEN_LOAD, async () => {
+        try {
+            const path = getTokenPath();
+            if (!fs.existsSync(path)) {
+                return { success: false, error: 'No saved token' };
+            }
+            if (!electron_1.safeStorage.isEncryptionAvailable()) {
+                return { success: false, error: 'Encryption not available' };
+            }
+            const encrypted = fs.readFileSync(path);
+            const decrypted = electron_1.safeStorage.decryptString(encrypted);
+            const data = JSON.parse(decrypted);
+            return {
+                success: true,
+                token: data.token,
+                username: data.username,
+                savedAt: data.savedAt,
+            };
+        }
+        catch (error) {
+            console.error('[GitHub Token] Error loading:', error);
+            return { success: false, error: sanitizeError(error) };
+        }
+    });
+    electron_1.ipcMain.handle(channels_1.IPC_CHANNELS.GITHUB_TOKEN_CLEAR, async () => {
+        try {
+            const tokenPath = getTokenPath();
+            if (fs.existsSync(tokenPath)) {
+                fs.unlinkSync(tokenPath);
+            }
+            return { success: true };
+        }
+        catch (error) {
+            return { success: false, error: sanitizeError(error) };
+        }
     });
     // ============================================
     // Git Operations

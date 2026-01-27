@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useNavigationStore, useProjectStore, useWorkflowStore, phaseDisplayInfo, useConnectionsStore } from '@/stores';
 import { claudeService, fileGenerationService, aiWorkflowService, type ClaudeMessage, type DiscoveryContext } from '@/services';
-import { Button } from '@/components/ui';
+import { Button, ThinkingIndicator } from '@/components/ui';
 
 interface DisplayMessage {
   id: string;
@@ -20,13 +20,14 @@ export function AssistantGuide() {
   const { chatPanelOpen, toggleChatPanel, setChatPanelOpen, toggleXrayPanel } = useNavigationStore();
   const { currentProject, openProject } = useProjectStore();
   const { currentPhase, setPhase, completePhase, setConversationContext, conversationContext } = useWorkflowStore();
-  const { isClaudeConnected, isGitHubConnected, getConnection } = useConnectionsStore();
+  const { isClaudeConnected, isGitHubConnected, getGitHubToken } = useConnectionsStore();
 
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [claudeRunning, setClaudeRunning] = useState(false);
   const [isAIMode, setIsAIMode] = useState(false);
+  const [isQueryPending, setIsQueryPending] = useState(false); // Disable input during query
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const discoveryStep = useRef(0);
@@ -160,6 +161,13 @@ export function AssistantGuide() {
 
   // Send message to AI and stream response
   const sendToAI = useCallback(async (message: string, onComplete?: (response: string) => void) => {
+    // Prevent duplicate queries - use state to also disable UI
+    if (isQueryPending) {
+      console.log('[AssistantGuide] Query already in progress, skipping');
+      return '';
+    }
+
+    setIsQueryPending(true);
     setIsTyping(true);
     const msgId = startStreamingMessage();
     let fullResponse = '';
@@ -173,21 +181,35 @@ export function AssistantGuide() {
           fullResponse += chunk;
           updateStreamingMessage(msgId, fullResponse);
         },
-        onComplete: (response) => {
-          completeStreamingMessage(msgId);
-          onComplete?.(response);
+        onComplete: (resp) => {
+          setIsQueryPending(false);
+          // If response is empty (query was cancelled), remove the streaming message
+          if (!resp || resp.trim() === '') {
+            setMessages(prev => prev.filter(m => m.id !== msgId));
+          } else {
+            completeStreamingMessage(msgId);
+            onComplete?.(resp);
+          }
         },
         onError: (error) => {
-          updateStreamingMessage(msgId, `❌ Error: ${error}`);
-          completeStreamingMessage(msgId);
+          setIsQueryPending(false);
+          // Don't show cancellation as error
+          if (error.includes('cancelled') || error.includes('canceled')) {
+            setMessages(prev => prev.filter(m => m.id !== msgId));
+          } else {
+            updateStreamingMessage(msgId, `❌ Error: ${error}`);
+            completeStreamingMessage(msgId);
+          }
         },
       });
       return response;
     } catch (error) {
-      completeStreamingMessage(msgId);
+      setIsQueryPending(false);
+      // Remove the streaming message on error
+      setMessages(prev => prev.filter(m => m.id !== msgId));
       throw error;
     }
-  }, [startStreamingMessage, updateStreamingMessage, completeStreamingMessage]);
+  }, [isQueryPending, startStreamingMessage, updateStreamingMessage, completeStreamingMessage]);
 
   const addUserMessage = useCallback((content: string) => {
     const msg: DisplayMessage = {
@@ -337,11 +359,11 @@ export function AssistantGuide() {
   const createGitHubRepo = async (projectPath: string, projectName: string) => {
     if (!window.electron) return;
 
-    const githubConnection = getConnection('github');
-    const accessToken = githubConnection?.metadata?.accessToken as string | undefined;
+    // Get token from secure storage (via store)
+    const accessToken = getGitHubToken();
 
     if (!accessToken) {
-      addAssistantMessage("❌ GitHub access token not found. Please reconnect GitHub.");
+      addAssistantMessage("❌ GitHub access token not found. Please reconnect GitHub in Settings → Connections.");
       return;
     }
 
@@ -760,7 +782,7 @@ export function AssistantGuide() {
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isQueryPending) return;
 
     const userInput = input.trim();
     addUserMessage(userInput);
@@ -1007,11 +1029,9 @@ export function AssistantGuide() {
           </div>
         ))}
 
-        {isTyping && (
+        {(isTyping || isQueryPending) && (
           <div className="chat-message assistant thinking">
-            <div className="thinking-indicator">
-              <span className="thinking-text">Claude is thinking...</span>
-            </div>
+            <ThinkingIndicator />
           </div>
         )}
 
@@ -1022,7 +1042,9 @@ export function AssistantGuide() {
         <textarea
           className="chat-input"
           placeholder={
-            currentPhase === 'discovery' && !currentProject
+            isQueryPending
+              ? "Waiting for response..."
+              : currentPhase === 'discovery' && !currentProject
               ? "Enter project name..."
               : currentPhase === 'discovery' && discoveryStep.current > 0
               ? "Your answer..."
@@ -1032,9 +1054,10 @@ export function AssistantGuide() {
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           rows={2}
+          disabled={isQueryPending}
         />
-        <Button variant="primary" onClick={handleSend} disabled={isTyping}>
-          {isTyping ? '...' : 'Send'}
+        <Button variant="primary" onClick={handleSend} disabled={isTyping || isQueryPending}>
+          {isTyping || isQueryPending ? '...' : 'Send'}
         </Button>
       </div>
     </div>

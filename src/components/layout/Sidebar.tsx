@@ -83,7 +83,7 @@ const navSections: NavSection[] = [
 ];
 
 export function Sidebar() {
-  const { currentScreen, setScreen, setChatPanelOpen } = useNavigationStore();
+  const { currentScreen, setScreen } = useNavigationStore();
   const { phases, currentPhase, setPhase } = useWorkflowStore();
   const { startTutorial, isDemoMode, startDemo } = useDemo();
   const { hasUpdates, suggestions } = useReleaseMonitor();
@@ -102,10 +102,10 @@ export function Sidebar() {
     p => phases[p]?.status === 'completed' || phases[p]?.status === 'approved'
   ).length;
 
-  // Handle phase click - open chat panel and set phase
+  // Handle phase click - navigate to phase detail screen
   const handlePhaseClick = (phase: WorkflowPhase) => {
     setPhase(phase);
-    setChatPanelOpen(true);
+    setScreen('phase-detail');
   };
 
   return (

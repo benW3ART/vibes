@@ -152,6 +152,16 @@ interface ElectronAPI {
       isPrivate: boolean,
       accessToken: string
     ) => Promise<GitHubRepoResult>;
+    // Secure token storage
+    saveToken: (token: string, username: string) => Promise<{ success: boolean; error?: string }>;
+    loadToken: () => Promise<{
+      success: boolean;
+      token?: string;
+      username?: string;
+      savedAt?: number;
+      error?: string;
+    }>;
+    clearToken: () => Promise<{ success: boolean; error?: string }>;
   };
   git: {
     status: (projectPath: string) => Promise<GitStatusResult>;

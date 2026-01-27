@@ -42,7 +42,7 @@ const CLAUDE_DOWNLOAD_URL = 'https://claude.ai/download';
 const ONBOARDING_COMPLETE_KEY = 'vibes:onboardingComplete';
 
 export function OnboardingWizard() {
-  const { isClaudeConnected, isGitHubConnected, addConnection, updateConnection, getConnection } = useConnectionsStore();
+  const { isClaudeConnected, isGitHubConnected, addConnection, updateConnection, getConnection, saveGitHubToken } = useConnectionsStore();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('claude');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,7 +244,13 @@ export function OnboardingWizard() {
       const result = await window.electron.github.authStart();
       setIsConnecting(false);
 
-      if (result.success) {
+      if (result.success && result.accessToken) {
+        // Save token securely using Electron's safeStorage
+        const saved = await saveGitHubToken(result.accessToken, result.username || 'unknown');
+        if (!saved) {
+          console.warn('[OnboardingWizard] Failed to save token to secure storage');
+        }
+
         const existing = getConnection('github');
         if (existing) {
           updateConnection(existing.id, {
@@ -258,7 +264,7 @@ export function OnboardingWizard() {
             name: 'GitHub',
             status: 'connected',
             lastConnected: new Date(),
-            metadata: { username: result.username, accessToken: result.accessToken },
+            metadata: { username: result.username },
           });
         }
       } else {

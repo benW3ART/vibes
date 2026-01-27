@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
+console.log('[Preload] Electron bridge initializing...');
+
 type Listener = (...args: unknown[]) => void;
 
 contextBridge.exposeInMainWorld('electron', {
@@ -91,6 +93,11 @@ contextBridge.exposeInMainWorld('electron', {
     authStart: () => ipcRenderer.invoke('github:auth:start'),
     createRepo: (name: string, description: string, isPrivate: boolean, accessToken: string) =>
       ipcRenderer.invoke('github:createRepo', name, description, isPrivate, accessToken),
+    // Secure token storage (encrypted with OS keychain)
+    saveToken: (token: string, username: string) =>
+      ipcRenderer.invoke('github:token:save', token, username),
+    loadToken: () => ipcRenderer.invoke('github:token:load'),
+    clearToken: () => ipcRenderer.invoke('github:token:clear'),
   },
 
   // Git operations
@@ -134,3 +141,16 @@ contextBridge.exposeInMainWorld('electron', {
     create: (name: string, path: string) => ipcRenderer.invoke('project:create', name, path),
   },
 });
+
+// Load GitHub token on startup
+ipcRenderer.invoke('github:token:load')
+  .then((result) => {
+    if (result.success) {
+      console.log('[Preload] GitHub token loaded for user:', result.username);
+    }
+  })
+  .catch(() => {
+    // Ignore errors - token may not exist yet
+  });
+
+console.log('[Preload] Electron bridge ready');

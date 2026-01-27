@@ -20,6 +20,9 @@ exports.IPC_CHANNELS = {
     GITHUB_AUTH_START: 'github:auth:start',
     GITHUB_AUTH_STATUS: 'github:auth:status',
     GITHUB_CREATE_REPO: 'github:createRepo',
+    GITHUB_TOKEN_SAVE: 'github:token:save',
+    GITHUB_TOKEN_LOAD: 'github:token:load',
+    GITHUB_TOKEN_CLEAR: 'github:token:clear',
     // Renderer -> Main: Git operations
     GIT_STATUS: 'git:status',
     GIT_COMMIT_AND_PUSH: 'git:commitAndPush',

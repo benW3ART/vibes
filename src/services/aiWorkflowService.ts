@@ -235,7 +235,13 @@ class AIWorkflowServiceClass {
 
   // Send a message and get AI response
   async sendMessage(message: string, callbacks: StreamCallbacks): Promise<string> {
+    console.log('[AIWorkflowService] sendMessage called');
+    console.log('[AIWorkflowService] Project path:', this.projectPath);
+    console.log('[AIWorkflowService] Current phase:', this.currentPhase);
+    console.log('[AIWorkflowService] Message:', message.substring(0, 100));
+
     if (!this.projectPath) {
+      console.error('[AIWorkflowService] No project initialized');
       callbacks.onError?.('No project initialized');
       throw new Error('No project initialized');
     }
@@ -249,23 +255,33 @@ class AIWorkflowServiceClass {
 
     // Check if in Electron mode
     if (!this.isElectronMode) {
+      console.log('[AIWorkflowService] Not in Electron mode, using simulation');
       return this.simulateResponse(message, callbacks);
     }
+
+    console.log('[AIWorkflowService] In Electron mode, calling Claude');
 
     // Build full prompt with context
     const contextPrompt = this.buildContextPrompt();
     const systemPrompt = this.getSystemPrompt();
     const fullPrompt = contextPrompt + `User: ${message}\n\nRespond as the assistant.`;
 
+    console.log('[AIWorkflowService] System prompt length:', systemPrompt.length);
+    console.log('[AIWorkflowService] Full prompt length:', fullPrompt.length);
+    console.log('[AIWorkflowService] Model ID:', this.getModelId() || 'default');
+
     callbacks.onStart?.();
+    console.log('[AIWorkflowService] onStart callback called');
 
     // Set up chunk listener for streaming (fullResponse accumulates for potential future use)
     this.unsubscribeChunk = window.electron.claude.onQueryChunk((chunk: unknown) => {
       const text = String(chunk);
+      console.log('[AIWorkflowService] Received chunk, length:', text.length);
       callbacks.onChunk?.(text);
     });
 
     try {
+      console.log('[AIWorkflowService] Calling window.electron.claude.query...');
       const result = await window.electron.claude.query(
         this.projectPath,
         fullPrompt,
@@ -273,11 +289,14 @@ class AIWorkflowServiceClass {
         this.getModelId()
       );
 
+      console.log('[AIWorkflowService] Query returned:', { success: result.success, hasResponse: !!result.response, error: result.error });
+
       this.unsubscribeChunk?.();
       this.unsubscribeChunk = null;
 
       if (result.success && result.response) {
         const response = result.response;
+        console.log('[AIWorkflowService] Success! Response length:', response.length);
 
         // Add assistant response to history
         this.conversationHistory.push({
@@ -290,10 +309,21 @@ class AIWorkflowServiceClass {
         return response;
       } else {
         const error = result.error || 'Unknown error';
+        console.log('[AIWorkflowService] Query result:', error);
+
+        // Don't treat cancellation as an error - just silently complete with empty response
+        if (error.includes('cancelled') || error.includes('canceled')) {
+          console.log('[AIWorkflowService] Query was cancelled, completing silently');
+          callbacks.onComplete?.('');
+          return '';
+        }
+
+        console.error('[AIWorkflowService] Query failed:', error);
         callbacks.onError?.(error);
         throw new Error(error);
       }
     } catch (error) {
+      console.error('[AIWorkflowService] Exception during query:', error);
       this.unsubscribeChunk?.();
       this.unsubscribeChunk = null;
       const errorMsg = error instanceof Error ? error.message : String(error);
