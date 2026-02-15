@@ -18,6 +18,49 @@ const mcpProcesses: Map<string, ChildProcess> = new Map();
 // Track allowed project paths (set when user selects via dialog)
 const allowedProjectPaths: Set<string> = new Set();
 
+// Path to persist allowed project paths across restarts
+const getAllowedPathsFile = () => path.join(app.getPath('userData'), 'allowed-project-paths.json');
+
+// Load persisted allowed paths on startup
+function loadAllowedPaths(): void {
+  try {
+    const filePath = getAllowedPathsFile();
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      if (Array.isArray(data.paths)) {
+        // Only add paths that still exist
+        for (const p of data.paths) {
+          if (typeof p === 'string' && fs.existsSync(p)) {
+            allowedProjectPaths.add(p);
+          }
+        }
+        console.log('[IPC] Loaded', allowedProjectPaths.size, 'allowed project paths');
+      }
+    }
+  } catch (error) {
+    console.warn('[IPC] Could not load allowed paths:', error);
+  }
+}
+
+// Save allowed paths to disk
+function saveAllowedPaths(): void {
+  try {
+    const filePath = getAllowedPathsFile();
+    const data = { paths: Array.from(allowedProjectPaths), savedAt: Date.now() };
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.warn('[IPC] Could not save allowed paths:', error);
+  }
+}
+
+// Add a path to allowed list and persist
+function addAllowedPath(projectPath: string): void {
+  if (projectPath && fs.existsSync(projectPath)) {
+    allowedProjectPaths.add(projectPath);
+    saveAllowedPaths();
+  }
+}
+
 // ============================================
 // Security helpers
 // ============================================
@@ -105,6 +148,9 @@ function sanitizeError(error: unknown): string {
 // ============================================
 
 export function setupIpcHandlers(mainWindow: BrowserWindow): void {
+  // Load persisted allowed paths on startup
+  loadAllowedPaths();
+
   // Claude process management
   ipcMain.handle(IPC_CHANNELS.CLAUDE_SPAWN, async (_event, projectPath: string) => {
     // Validate project path
@@ -153,16 +199,18 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
     return claudeBridge?.stop() ?? false;
   });
 
-  // Track current query bridge for cancellation
-  let queryBridge: ClaudeBridge | null = null;
+  // Track query bridges per project (allows concurrent queries on different projects)
+  const queryBridges = new Map<string, ClaudeBridge>();
 
   // Claude query (one-shot for conversational AI)
+  // Now supports concurrent queries on different projects
   ipcMain.handle(IPC_CHANNELS.CLAUDE_QUERY, async (_event, projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) => {
     console.log('[Claude Query] Received query request');
     console.log('[Claude Query] Project path:', projectPath);
     console.log('[Claude Query] Prompt length:', prompt?.length || 0);
     console.log('[Claude Query] Has system prompt:', !!systemPrompt);
     console.log('[Claude Query] Model ID:', modelId || 'default');
+    console.log('[Claude Query] Active bridges:', queryBridges.size);
 
     // Validate project path
     if (!isPathAllowed(projectPath, allowedProjectPaths)) {
@@ -173,46 +221,63 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
     console.log('[Claude Query] Path validated OK');
 
-    // Cancel any existing query
-    if (queryBridge) {
-      console.log('[Claude Query] Cancelling existing query');
-      queryBridge.cancelQuery();
-      queryBridge = null;
+    // Cancel any existing query for THIS project only (not other projects)
+    const existingBridge = queryBridges.get(projectPath);
+    if (existingBridge) {
+      console.log('[Claude Query] Cancelling existing query for this project');
+      existingBridge.cancelQuery();
+      queryBridges.delete(projectPath);
     }
 
     // Create bridge for this query
-    console.log('[Claude Query] Creating ClaudeBridge...');
-    queryBridge = new ClaudeBridge({ projectPath });
+    console.log('[Claude Query] Creating ClaudeBridge for project...');
+    const bridge = new ClaudeBridge({ projectPath });
+    queryBridges.set(projectPath, bridge);
 
     try {
       console.log('[Claude Query] Starting query...');
-      const result = await queryBridge.query({
+      const result = await bridge.query({
         prompt,
         systemPrompt,
         modelId,
         timeout: 120000,
         onChunk: (chunk) => {
-          mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_QUERY_CHUNK, chunk);
+          // Include projectPath so renderer can route to correct project
+          mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_QUERY_CHUNK, { projectPath, chunk });
         },
       });
 
       console.log('[Claude Query] Query completed:', { success: result.success, responseLength: result.response?.length || 0, error: result.error });
-      queryBridge = null;
+      queryBridges.delete(projectPath);
       return result;
     } catch (error) {
       console.error('[Claude Query] Query error:', error);
-      queryBridge = null;
+      queryBridges.delete(projectPath);
       return { success: false, error: sanitizeError(error) };
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.CLAUDE_QUERY_CANCEL, async () => {
-    if (queryBridge) {
-      const result = queryBridge.cancelQuery();
-      queryBridge = null;
-      return result;
+  // Cancel query for a specific project
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_QUERY_CANCEL, async (_event, projectPath?: string) => {
+    if (projectPath) {
+      // Cancel specific project's query
+      const bridge = queryBridges.get(projectPath);
+      if (bridge) {
+        const result = bridge.cancelQuery();
+        queryBridges.delete(projectPath);
+        return result;
+      }
+      return false;
+    } else {
+      // Cancel all queries (backwards compatibility)
+      let cancelled = false;
+      for (const [path, bridge] of queryBridges) {
+        bridge.cancelQuery();
+        queryBridges.delete(path);
+        cancelled = true;
+      }
+      return cancelled;
     }
-    return false;
   });
 
   // File operations with path validation
@@ -263,8 +328,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
       title: 'Select Project Folder',
     });
     if (!result.canceled && result.filePaths[0]) {
-      // Add to allowed paths when user explicitly selects
-      allowedProjectPaths.add(result.filePaths[0]);
+      // Add to allowed paths when user explicitly selects (and persist)
+      addAllowedPath(result.filePaths[0]);
     }
     return result.canceled ? null : result.filePaths[0];
   });
@@ -301,8 +366,8 @@ export function setupIpcHandlers(mainWindow: BrowserWindow): void {
 
     const projectPath = path.join(basePath, name);
 
-    // Add new project path to allowed paths
-    allowedProjectPaths.add(projectPath);
+    // Add new project path to allowed paths (and persist)
+    addAllowedPath(projectPath);
 
     try {
       // Create main project directory
@@ -478,6 +543,34 @@ State is stored in \`.genius/STATE.json\`.
     } catch (error) {
       return { success: false, error: sanitizeError(error) };
     }
+  });
+
+  // Register an existing project path (called when loading saved projects)
+  ipcMain.handle(IPC_CHANNELS.PROJECT_REGISTER_PATH, async (_event, projectPath: string) => {
+    // Basic validation - must be a string and exist on disk
+    if (typeof projectPath !== 'string' || !projectPath.trim()) {
+      return { success: false, error: 'Invalid path' };
+    }
+
+    // Resolve and normalize the path
+    const resolvedPath = path.resolve(projectPath);
+
+    // Check if path exists
+    if (!fs.existsSync(resolvedPath)) {
+      return { success: false, error: 'Path does not exist' };
+    }
+
+    // Check if it's a directory
+    const stats = fs.statSync(resolvedPath);
+    if (!stats.isDirectory()) {
+      return { success: false, error: 'Path is not a directory' };
+    }
+
+    // Add to allowed paths and persist
+    addAllowedPath(resolvedPath);
+    console.log('[IPC] Registered project path:', resolvedPath);
+
+    return { success: true, path: resolvedPath };
   });
 
   // ============================================
@@ -1114,6 +1207,93 @@ read -p "Press Enter to close..."
           { id: 'claude-haiku-3-5-20241022', name: 'Claude Haiku 3.5', tier: 'haiku' },
         ],
       };
+    }
+  });
+
+  // ============================================
+  // Claude Skill Invocation
+  // ============================================
+
+  ipcMain.handle(IPC_CHANNELS.CLAUDE_INVOKE_SKILL, async (
+    _event,
+    projectPath: string,
+    skillName: string,
+    userInput?: string
+  ) => {
+    // Validate project path
+    if (!isPathAllowed(projectPath, allowedProjectPaths)) {
+      return { success: false, error: 'Access denied: path outside allowed directories' };
+    }
+
+    // Validate skill name (alphanumeric, dash, underscore)
+    if (!/^[a-zA-Z0-9_-]+$/.test(skillName)) {
+      return { success: false, error: 'Invalid skill name' };
+    }
+
+    console.log('[Skill Invoke] Invoking skill:', skillName);
+    console.log('[Skill Invoke] Project path:', projectPath);
+    console.log('[Skill Invoke] User input:', userInput?.substring(0, 100) || 'none');
+
+    try {
+      const claudePath = getClaudePath();
+      const fullPath = getFullPath();
+
+      // Build the skill command
+      // Format: claude skill <skillName> [-- <userInput>]
+      const args = ['skill', skillName];
+
+      // If user input is provided, pass it after --
+      if (userInput && userInput.trim()) {
+        args.push('--', userInput.trim());
+      }
+
+      return new Promise((resolve) => {
+        let output = '';
+        let errorOutput = '';
+
+        const proc = spawn(claudePath, args, {
+          cwd: projectPath,
+          shell: false,
+          env: { ...process.env, PATH: fullPath },
+          timeout: 300000, // 5 minute timeout for skills
+        });
+
+        proc.stdout?.on('data', (data: Buffer) => {
+          const chunk = data.toString();
+          output += chunk;
+          // Stream output to renderer (include projectPath for multi-project support)
+          mainWindow.webContents.send(IPC_CHANNELS.CLAUDE_QUERY_CHUNK, { projectPath, chunk });
+        });
+
+        proc.stderr?.on('data', (data: Buffer) => {
+          errorOutput += data.toString();
+        });
+
+        proc.on('error', (err: Error) => {
+          console.error('[Skill Invoke] Process error:', err);
+          resolve({ success: false, error: err.message });
+        });
+
+        proc.on('exit', (code) => {
+          console.log('[Skill Invoke] Process exited with code:', code);
+          if (code === 0) {
+            resolve({
+              success: true,
+              output,
+              skillName,
+            });
+          } else {
+            resolve({
+              success: false,
+              error: errorOutput || `Skill exited with code ${code}`,
+              output,
+            });
+          }
+        });
+      });
+    } catch (error) {
+      console.error('[Skill Invoke] Error:', error);
+      return { success: false, error: sanitizeError(error) };
     }
   });
 

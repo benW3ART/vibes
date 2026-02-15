@@ -1,0 +1,43 @@
+.active-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-secondary, #0a0a0f);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  font-size: 11px;
+  color: var(--text-muted, #666);
+}
+
+.active-skills,
+.active-mcps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.context-label {
+  opacity: 0.7;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.skill-badge,
+.mcp-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-tertiary, #1a1a2e);
+  color: var(--text-secondary, #ccc);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+}
+
+.skill-badge {
+  border-left: 2px solid var(--primary, #f97316);
+}
+
+.mcp-badge {
+  border-left: 2px solid var(--secondary, #ec4899);
+}

@@ -3,7 +3,7 @@ import { ExecutionBar, AssistantGuide, XRayPanel, PanelOverlay, CommandPalette, 
 import { ToastContainer } from '@/components/ui';
 import { useKeyboardShortcuts } from '@/hooks';
 import { DemoProvider } from '@/demo';
-import { useProjectStore, useNavigationStore, useConnectionsStore } from '@/stores';
+import { useProjectStore, useNavigationStore, useConnectionsStore, initializeProjectPaths } from '@/stores';
 import { useEffect } from 'react';
 
 function App() {
@@ -11,6 +11,11 @@ function App() {
   const { currentProject } = useProjectStore();
   const { setChatPanelOpen } = useNavigationStore();
   const { loadGitHubToken } = useConnectionsStore();
+
+  // Register persisted project paths with Electron on app start
+  useEffect(() => {
+    initializeProjectPaths();
+  }, []);
 
   // Load GitHub token from secure storage on app start
   useEffect(() => {

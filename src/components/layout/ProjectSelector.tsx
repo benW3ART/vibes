@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProjectStore } from '@/stores';
+import { useProjectStore, generateProjectId } from '@/stores';
 import { StatusDot, Badge } from '@/components/ui';
 import { logger } from '@/utils/logger';
 
@@ -20,7 +20,7 @@ export function ProjectSelector() {
     const path = await window.electron.dialog.openDirectory();
     if (path) {
       openProject({
-        id: Date.now().toString(),
+        id: generateProjectId(path), // Path-based ID for data persistence
         name: path.split('/').pop() || 'Project',
         path,
         status: 'idle',
@@ -43,10 +43,11 @@ export function ProjectSelector() {
 
     if (!window.electron) {
       // For browser/demo mode, create a mock project
+      const demoPath = `/Users/me/Projects/${newProjectName}`;
       openProject({
-        id: Date.now().toString(),
+        id: generateProjectId(demoPath), // Path-based ID for data persistence
         name: newProjectName,
-        path: `/Users/me/Projects/${newProjectName}`,
+        path: demoPath,
         status: 'idle',
         lastOpened: new Date(),
         createdAt: new Date(),
@@ -63,7 +64,7 @@ export function ProjectSelector() {
       logger.debug('[ProjectSelector] Result:', result);
       if (result.success && result.path) {
         openProject({
-          id: Date.now().toString(),
+          id: generateProjectId(result.path), // Path-based ID for data persistence
           name: newProjectName,
           path: result.path,
           status: 'idle',

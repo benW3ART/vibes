@@ -52,6 +52,13 @@ interface ClaudeModelsResult {
   error?: string;
 }
 
+interface SkillInvokeResult {
+  success: boolean;
+  output?: string;
+  skillName?: string;
+  error?: string;
+}
+
 interface GitChange {
   status: string;
   path: string;
@@ -102,12 +109,13 @@ interface ElectronAPI {
     resume: () => Promise<boolean>;
     stop: () => Promise<boolean>;
     query: (projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) => Promise<ClaudeQueryResult>;
-    queryCancel: () => Promise<boolean>;
+    queryCancel: (projectPath?: string) => Promise<boolean>;
     authStatus: () => Promise<ClaudeAuthStatus>;
     authLogin: () => Promise<{ success: boolean; error?: string }>;
     authLoginStart: () => Promise<{ success: boolean; pid?: number; error?: string }>;
     authLoginCancel: () => Promise<{ success: boolean; error?: string }>;
     models: () => Promise<ClaudeModelsResult>;
+    invokeSkill: (projectPath: string, skillName: string, userInput?: string) => Promise<SkillInvokeResult>;
     onOutput: (callback: Listener) => Unsubscribe;
     onError: (callback: Listener) => Unsubscribe;
     onExit: (callback: Listener) => Unsubscribe;
@@ -194,6 +202,7 @@ interface ElectronAPI {
   };
   project: {
     create: (name: string, path: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+    registerPath: (path: string) => Promise<{ success: boolean; path?: string; error?: string }>;
   };
 }
 

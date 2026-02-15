@@ -1,7 +1,7 @@
 // AI Workflow Service - Manages AI-driven workflow phases via Claude Code CLI
 import { useSettingsStore } from '@/stores';
 
-export type WorkflowPhase = 'discovery' | 'specifications' | 'design' | 'architecture';
+export type WorkflowPhase = 'discovery' | 'market-analysis' | 'specifications' | 'design' | 'architecture';
 
 export interface AIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -18,36 +18,58 @@ export interface StreamCallbacks {
 
 // System prompts for each workflow phase
 const PHASE_SYSTEM_PROMPTS: Record<WorkflowPhase, string> = {
-  discovery: `You are an expert product discovery consultant. Your role is to help users define their project through a natural conversation.
+  discovery: `You are an expert product discovery consultant conducting a ONE-BY-ONE interview.
 
-Guide them through these key areas:
-1. Project idea (what problem does it solve?)
-2. Target users (who is the primary audience?)
-3. Main features (3-5 core features for MVP)
-4. Competitors (existing alternatives?)
-5. Differentiator (what makes this unique?)
+CRITICAL RULE: You MUST ask EXACTLY ONE question per message. Never ask multiple questions. Never list multiple questions. ONE question only.
 
-Rules:
-- Ask ONE question at a time
-- Be conversational and encouraging
-- Keep responses concise (2-4 sentences)
-- Use markdown for formatting
-- After gathering ALL 5 areas, summarize and offer to generate DISCOVERY.xml
-- Always respond in the same language as the user`,
+Interview sequence (ask in this order, one at a time):
+1. Project idea - "What problem does your project solve?"
+2. Target users - "Who are the main users of this product?"
+3. Main features - "What are the 3-5 core features for your MVP?"
+4. Competitors - "What existing alternatives or competitors exist?"
+5. Differentiator - "What makes your solution unique?"
 
-  specifications: `You are a senior product manager creating detailed specifications from discovery findings.
+Format EVERY response as:
+1. Brief acknowledgment of their previous answer (1-2 sentences max)
+2. Then ask the NEXT SINGLE question from the sequence
+
+Example good response:
+"Great! A task management app for remote teams sounds useful. Now, **who are the main users** you're targeting with this product?"
+
+Example BAD response (never do this):
+"Great idea! Who are your users? What features do you want? Who are your competitors?"
+
+After gathering ALL 5 areas, provide a brief summary and offer to generate DISCOVERY.xml.
+Always respond in the same language as the user.`,
+
+  'market-analysis': `You are an expert market analyst helping to analyze the market opportunity for a project.
+
+You have access to the discovery findings from the previous phase. Use this context to provide relevant market analysis.
 
 Your role:
-- Transform discovery into user stories with acceptance criteria
+- Estimate market size (TAM, SAM, SOM)
+- Identify target market segments
+- Analyze the competitive landscape
+- Summarize the market opportunity
+
+When the user asks you to do the analysis yourself, USE the project context provided to give a comprehensive market analysis.
+Always be specific with numbers and examples when possible.
+Always respond in the same language as the user.`,
+
+  specifications: `You are a senior product manager creating detailed specifications.
+
+Your role:
+- Transform discovery findings into structured specifications
+- Create user stories with clear acceptance criteria
 - Define functional requirements (auth, API, features)
 - Define non-functional requirements (performance, security)
-- Suggest a data model based on features
+- Suggest a data model
 
-Rules:
-- Be structured and comprehensive
-- Ask clarifying questions if needed
-- When ready, offer to generate SPECIFICATIONS.xml
-- Always respond in the same language as the user`,
+IMPORTANT: Present specifications in organized sections, not as one long paragraph.
+Use headers like "## User Stories", "## Functional Requirements", etc.
+
+When ready, offer to generate SPECIFICATIONS.xml.
+Always respond in the same language as the user.`,
 
   design: `You are a senior UX/UI designer creating a design system.
 
@@ -117,19 +139,35 @@ Generate complete XML with:
 
 Output ONLY the XML content, nothing else.`,
 
-  design: (context: Record<string, string>) => `Generate a DESIGN-SYSTEM.xml file for option ${context.designChoice || 'A'}.
+  design: (context: Record<string, string>) => `Generate a complete DESIGN-SYSTEM.html file with interactive visual previews.
 
 Project: ${context.projectName || 'New Project'}
+Project Idea: ${context.projectIdea || 'Not specified'}
+Target Users: ${context.targetUsers || 'Not specified'}
 
-Include:
-- Full color palette (primary, secondary, accent, background, surface, text, states)
-- Typography (heading font, body font, sizes)
-- Spacing scale
-- Border radii
-- Shadows
-- Component variants
+Create a single HTML file with embedded CSS that showcases 3 design options (A, B, C) with:
 
-Output ONLY the XML content, nothing else.`,
+1. TAB NAVIGATION at the top to switch between Option A, Option B, Option C
+
+2. For EACH option, include:
+   - Brand personality description (2-3 sentences about the vibe)
+   - Full color palette displayed as colored boxes with hex values
+   - Typography showcase (heading font, body font, sizes - use Google Fonts)
+   - Component examples: primary button, secondary button, input field, card
+   - Dark mode toggle showing light/dark variants
+
+3. INTERACTIVE SELECTION:
+   - Add a "Choose This Design" button for each option
+   - When clicked, show an alert with the selected option
+
+4. RESPONSIVE DESIGN:
+   - Works on desktop and mobile
+   - Clean, modern layout
+
+Use inline JavaScript for tab switching and selection. Use CSS variables for theme colors.
+The HTML should be fully self-contained and openable in any browser.
+
+Output ONLY the complete HTML content, nothing else. Start with <!DOCTYPE html>.`,
 
   architecture: (context: Record<string, string>) => `Generate ARCHITECTURE.md for the project.
 
@@ -168,11 +206,61 @@ class AIWorkflowServiceClass {
   private projectPath: string | null = null;
   private currentPhase: WorkflowPhase | null = null;
   private conversationHistory: AIMessage[] = [];
+  private projectContext: Record<string, string> = {}; // Persistent project context
   private isElectronMode = false;
   private unsubscribeChunk: (() => void) | null = null;
 
+  // Default timeout: 2 minutes for AI queries
+  private readonly DEFAULT_TIMEOUT = 120000;
+
   constructor() {
     this.isElectronMode = typeof window !== 'undefined' && !!window.electron;
+  }
+
+  // Update project context (call this when context changes)
+  setProjectContext(context: Record<string, string>): void {
+    this.projectContext = { ...this.projectContext, ...context };
+  }
+
+  // Get current project context
+  getProjectContext(): Record<string, string> {
+    return { ...this.projectContext };
+  }
+
+  // Build a context summary string from project context
+  private buildProjectContextSummary(): string {
+    const ctx = this.projectContext;
+    const parts: string[] = [];
+
+    if (ctx.projectName) parts.push(`Project: ${ctx.projectName}`);
+    if (ctx.projectIdea) parts.push(`Idea: ${ctx.projectIdea}`);
+    if (ctx.targetUsers) parts.push(`Target Users: ${ctx.targetUsers}`);
+    if (ctx.mainFeatures) parts.push(`Main Features: ${ctx.mainFeatures}`);
+    if (ctx.competitors) parts.push(`Competitors: ${ctx.competitors}`);
+    if (ctx.differentiator) parts.push(`Differentiator: ${ctx.differentiator}`);
+    if (ctx.marketSize) parts.push(`Market Size: ${ctx.marketSize}`);
+    if (ctx.targetSegments) parts.push(`Target Segments: ${ctx.targetSegments}`);
+    if (ctx.competitiveLandscape) parts.push(`Competitive Landscape: ${ctx.competitiveLandscape}`);
+    if (ctx.designChoice) parts.push(`Design Choice: ${ctx.designChoice}`);
+    if (ctx.techStack) parts.push(`Tech Stack: ${ctx.techStack}`);
+
+    if (parts.length === 0) return '';
+
+    return `\n\n--- PROJECT CONTEXT ---\n${parts.join('\n')}\n--- END CONTEXT ---\n\n`;
+  }
+
+  // Timeout wrapper utility - wraps a promise with a timeout
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    ms: number,
+    operation: string
+  ): Promise<T> {
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${operation} timed out after ${Math.round(ms / 1000)}s. Please try again.`));
+      }, ms);
+    });
+    return Promise.race([promise, timeout]);
   }
 
   // Get selected model ID from global settings (or null for default)
@@ -182,11 +270,15 @@ class AIWorkflowServiceClass {
     return modelId || undefined;
   }
 
-  // Initialize for a project
+  // Initialize for a project (only resets if different project)
   init(projectPath: string): void {
-    this.projectPath = projectPath;
-    this.conversationHistory = [];
-    this.currentPhase = null;
+    // Only reset everything if switching to a different project
+    if (this.projectPath !== projectPath) {
+      this.projectPath = projectPath;
+      this.conversationHistory = [];
+      this.projectContext = {};
+      this.currentPhase = null;
+    }
   }
 
   // Start a workflow phase
@@ -194,20 +286,9 @@ class AIWorkflowServiceClass {
     this.currentPhase = phase;
     this.conversationHistory = [];
 
-    // Add context summary if provided
+    // Merge provided context into persistent project context
     if (context && Object.keys(context).length > 0) {
-      const summary = Object.entries(context)
-        .filter(([, v]) => v)
-        .map(([k, v]) => `**${k}**: ${v}`)
-        .join('\n');
-
-      if (summary) {
-        this.conversationHistory.push({
-          role: 'system',
-          content: `Previous context:\n${summary}`,
-          timestamp: new Date(),
-        });
-      }
+      this.setProjectContext(context);
     }
   }
 
@@ -261,10 +342,13 @@ class AIWorkflowServiceClass {
 
     console.log('[AIWorkflowService] In Electron mode, calling Claude');
 
-    // Build full prompt with context
+    // Build full prompt with conversation history AND project context
     const contextPrompt = this.buildContextPrompt();
+    const projectContextSummary = this.buildProjectContextSummary();
     const systemPrompt = this.getSystemPrompt();
-    const fullPrompt = contextPrompt + `User: ${message}\n\nRespond as the assistant.`;
+
+    // Always include project context so Claude knows what we're working on
+    const fullPrompt = projectContextSummary + contextPrompt + `User: ${message}\n\nRespond as the assistant.`;
 
     console.log('[AIWorkflowService] System prompt length:', systemPrompt.length);
     console.log('[AIWorkflowService] Full prompt length:', fullPrompt.length);
@@ -274,19 +358,37 @@ class AIWorkflowServiceClass {
     console.log('[AIWorkflowService] onStart callback called');
 
     // Set up chunk listener for streaming (fullResponse accumulates for potential future use)
-    this.unsubscribeChunk = window.electron.claude.onQueryChunk((chunk: unknown) => {
-      const text = String(chunk);
+    // Chunks now include projectPath for multi-project support
+    this.unsubscribeChunk = window.electron.claude.onQueryChunk((data: unknown) => {
+      // Handle both old format (string) and new format ({ projectPath, chunk })
+      let text: string;
+      if (typeof data === 'object' && data !== null && 'chunk' in data) {
+        const { projectPath: chunkProject, chunk } = data as { projectPath: string; chunk: string };
+        // Only process chunks for this project
+        if (chunkProject !== this.projectPath) {
+          return;
+        }
+        text = chunk;
+      } else {
+        text = String(data);
+      }
       console.log('[AIWorkflowService] Received chunk, length:', text.length);
       callbacks.onChunk?.(text);
     });
 
     try {
-      console.log('[AIWorkflowService] Calling window.electron.claude.query...');
-      const result = await window.electron.claude.query(
-        this.projectPath,
-        fullPrompt,
-        systemPrompt,
-        this.getModelId()
+      console.log('[AIWorkflowService] Calling window.electron.claude.query with timeout...');
+
+      // Wrap the query with a timeout
+      const result = await this.withTimeout(
+        window.electron.claude.query(
+          this.projectPath,
+          fullPrompt,
+          systemPrompt,
+          this.getModelId()
+        ),
+        this.DEFAULT_TIMEOUT,
+        'AI query'
       );
 
       console.log('[AIWorkflowService] Query returned:', { success: result.success, hasResponse: !!result.response, error: result.error });
@@ -327,7 +429,13 @@ class AIWorkflowServiceClass {
       this.unsubscribeChunk?.();
       this.unsubscribeChunk = null;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      callbacks.onError?.(errorMsg);
+
+      // Handle timeout specifically
+      if (errorMsg.includes('timed out')) {
+        callbacks.onError?.('Request timed out. The AI is taking too long to respond. Please try again.');
+      } else {
+        callbacks.onError?.(errorMsg);
+      }
       throw error;
     }
   }
@@ -357,17 +465,30 @@ class AIWorkflowServiceClass {
 
     callbacks.onStart?.();
 
-    this.unsubscribeChunk = window.electron.claude.onQueryChunk((chunk: unknown) => {
-      const text = String(chunk);
+    // Chunks include projectPath for multi-project support
+    this.unsubscribeChunk = window.electron.claude.onQueryChunk((data: unknown) => {
+      let text: string;
+      if (typeof data === 'object' && data !== null && 'chunk' in data) {
+        const { projectPath: chunkProject, chunk } = data as { projectPath: string; chunk: string };
+        if (chunkProject !== this.projectPath) return;
+        text = chunk;
+      } else {
+        text = String(data);
+      }
       callbacks.onChunk?.(text);
     });
 
     try {
-      const result = await window.electron.claude.query(
-        this.projectPath,
-        prompt,
-        'You are a code generator. Output only the requested file content, no explanations.',
-        this.getModelId()
+      // Wrap the query with a timeout (slightly longer for file generation)
+      const result = await this.withTimeout(
+        window.electron.claude.query(
+          this.projectPath,
+          prompt,
+          'You are a code generator. Output only the requested file content, no explanations.',
+          this.getModelId()
+        ),
+        this.DEFAULT_TIMEOUT * 1.5, // 3 minutes for file generation
+        'File generation'
       );
 
       this.unsubscribeChunk?.();
@@ -385,15 +506,21 @@ class AIWorkflowServiceClass {
       this.unsubscribeChunk?.();
       this.unsubscribeChunk = null;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      callbacks.onError?.(errorMsg);
+
+      // Handle timeout specifically
+      if (errorMsg.includes('timed out')) {
+        callbacks.onError?.('File generation timed out. The operation is taking too long. Please try again.');
+      } else {
+        callbacks.onError?.(errorMsg);
+      }
       throw error;
     }
   }
 
-  // Cancel ongoing request
+  // Cancel ongoing request for this project
   cancelRequest(): void {
-    if (this.isElectronMode) {
-      window.electron.claude.queryCancel();
+    if (this.isElectronMode && this.projectPath) {
+      window.electron.claude.queryCancel(this.projectPath);
     }
     this.unsubscribeChunk?.();
     this.unsubscribeChunk = null;
@@ -533,6 +660,134 @@ class AIWorkflowServiceClass {
       return status.installed && status.authenticated;
     } catch {
       return false;
+    }
+  }
+
+  // Invoke genius-team skill as the single entry point for skill routing
+  // genius-team reads .genius/STATE.json and routes to the appropriate skill
+  async invokeGeniusTeam(userInput: string, callbacks?: StreamCallbacks): Promise<{
+    success: boolean;
+    output?: string;
+    error?: string;
+  }> {
+    if (!this.projectPath) {
+      const error = 'No project initialized';
+      callbacks?.onError?.(error);
+      return { success: false, error };
+    }
+
+    if (!this.isElectronMode) {
+      // Demo mode - simulate skill invocation
+      const simResponse = `[Demo Mode] genius-team would route this request based on .genius/STATE.json`;
+      callbacks?.onChunk?.(simResponse);
+      callbacks?.onComplete?.(simResponse);
+      return { success: true, output: simResponse };
+    }
+
+    console.log('[AIWorkflowService] Invoking genius-team skill');
+    console.log('[AIWorkflowService] Project path:', this.projectPath);
+    console.log('[AIWorkflowService] User input:', userInput?.substring(0, 100));
+
+    callbacks?.onStart?.();
+
+    // Set up chunk listener for streaming (with multi-project support)
+    this.unsubscribeChunk = window.electron.claude.onQueryChunk((data: unknown) => {
+      let text: string;
+      if (typeof data === 'object' && data !== null && 'chunk' in data) {
+        const { projectPath: chunkProject, chunk } = data as { projectPath: string; chunk: string };
+        if (chunkProject !== this.projectPath) return;
+        text = chunk;
+      } else {
+        text = String(data);
+      }
+      callbacks?.onChunk?.(text);
+    });
+
+    try {
+      const result = await window.electron.claude.invokeSkill(
+        this.projectPath,
+        'genius-team',
+        userInput
+      );
+
+      this.unsubscribeChunk?.();
+      this.unsubscribeChunk = null;
+
+      if (result.success) {
+        callbacks?.onComplete?.(result.output || '');
+        return { success: true, output: result.output };
+      } else {
+        callbacks?.onError?.(result.error || 'Skill invocation failed');
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      this.unsubscribeChunk?.();
+      this.unsubscribeChunk = null;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      callbacks?.onError?.(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  // Invoke a specific skill directly (bypasses genius-team routing)
+  async invokeSkill(skillName: string, userInput?: string, callbacks?: StreamCallbacks): Promise<{
+    success: boolean;
+    output?: string;
+    error?: string;
+  }> {
+    if (!this.projectPath) {
+      const error = 'No project initialized';
+      callbacks?.onError?.(error);
+      return { success: false, error };
+    }
+
+    if (!this.isElectronMode) {
+      const simResponse = `[Demo Mode] Would invoke skill: ${skillName}`;
+      callbacks?.onChunk?.(simResponse);
+      callbacks?.onComplete?.(simResponse);
+      return { success: true, output: simResponse };
+    }
+
+    console.log('[AIWorkflowService] Invoking skill:', skillName);
+
+    callbacks?.onStart?.();
+
+    // Multi-project support - filter chunks by project
+    this.unsubscribeChunk = window.electron.claude.onQueryChunk((data: unknown) => {
+      let text: string;
+      if (typeof data === 'object' && data !== null && 'chunk' in data) {
+        const { projectPath: chunkProject, chunk } = data as { projectPath: string; chunk: string };
+        if (chunkProject !== this.projectPath) return;
+        text = chunk;
+      } else {
+        text = String(data);
+      }
+      callbacks?.onChunk?.(text);
+    });
+
+    try {
+      const result = await window.electron.claude.invokeSkill(
+        this.projectPath,
+        skillName,
+        userInput
+      );
+
+      this.unsubscribeChunk?.();
+      this.unsubscribeChunk = null;
+
+      if (result.success) {
+        callbacks?.onComplete?.(result.output || '');
+        return { success: true, output: result.output };
+      } else {
+        callbacks?.onError?.(result.error || 'Skill invocation failed');
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      this.unsubscribeChunk?.();
+      this.unsubscribeChunk = null;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      callbacks?.onError?.(errorMsg);
+      return { success: false, error: errorMsg };
     }
   }
 }

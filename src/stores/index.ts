@@ -1,6 +1,6 @@
 export { useNavigationStore } from './navigationStore';
 export { useExecutionStore } from './executionStore';
-export { useProjectStore } from './projectStore';
+export { useProjectStore, generateProjectId, initializeProjectPaths } from './projectStore';
 export { useClaudeStore } from './claudeStore';
 export { useDemoStore } from './demoStore';
 export { useSettingsStore } from './settingsStore';

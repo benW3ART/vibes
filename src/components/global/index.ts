@@ -8,3 +8,4 @@ export { PanelOverlay } from './PanelOverlay';
 export { CommandPalette } from './CommandPalette';
 export { GitHubSyncIndicator } from './GitHubSyncIndicator';
 export { OnboardingWizard } from './OnboardingWizard';
+export { ActiveContext } from './ActiveContext';

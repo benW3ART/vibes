@@ -1,11 +1,12 @@
 .phase-detail-screen {
-  padding: 24px;
+  padding: 4px;
   max-width: 900px;
   margin: 0 auto;
+  /* Let parent .screen-container handle scrolling */
 }
 
 .phase-detail-header {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .phase-detail-title-row {
@@ -16,11 +17,11 @@
 }
 
 .phase-detail-icon {
-  font-size: 32px;
+  font-size: 28px;
 }
 
 .phase-detail-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -28,41 +29,146 @@
 
 .phase-detail-description {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 14px;
   margin: 0;
+}
+
+/* Progress Indicator */
+.phase-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Next Step Hint */
+.next-step-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: 8px;
+}
+
+.hint-icon {
+  font-size: 16px;
+}
+
+.hint-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .phase-detail-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+  padding-bottom: 40px;
 }
 
+/* Compact list layout for sections */
 .phase-detail-sections {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .phase-section-card {
-  padding: 20px;
+  padding: 16px;
+  border-left: 3px solid var(--primary);
+  background: var(--bg-secondary);
+}
+
+.phase-section-card.not-defined {
+  border-left-color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .phase-section-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 .phase-section-content {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-primary);
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: 1.5;
+}
+
+/* Grid layout for specs sections */
+.phase-detail-sections.specs-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.phase-section-card.full-width {
+  grid-column: 1 / -1;
+}
+
+/* User stories list */
+.user-stories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-story-item {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.user-story-id {
+  font-weight: 600;
+  color: var(--primary);
+  margin-right: 8px;
+}
+
+.user-story-text {
+  color: var(--text-primary);
+}
+
+.user-story-criteria {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .phase-artifact-card {
@@ -112,4 +218,65 @@
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
+}
+
+/* Features Grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.feature-number {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.feature-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* Competitors Badges */
+.competitors-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.competitor-badge {
+  padding: 6px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* Empty text placeholder */
+.empty-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
 }

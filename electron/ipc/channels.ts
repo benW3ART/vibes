@@ -13,6 +13,7 @@ export const IPC_CHANNELS = {
   CLAUDE_AUTH_LOGIN_START: 'claude:auth:login:start',
   CLAUDE_AUTH_LOGIN_CANCEL: 'claude:auth:login:cancel',
   CLAUDE_MODELS: 'claude:models',
+  CLAUDE_INVOKE_SKILL: 'claude:invokeSkill',
 
   // Renderer -> Main: GitHub
   GITHUB_AUTH_START: 'github:auth:start',
@@ -63,6 +64,7 @@ export const IPC_CHANNELS = {
 
   // Renderer -> Main: Project
   PROJECT_CREATE: 'project:create',
+  PROJECT_REGISTER_PATH: 'project:registerPath',
 
   // Main -> Renderer (events)
   CLAUDE_OUTPUT: 'claude:output',

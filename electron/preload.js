@@ -11,12 +11,13 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         resume: () => electron_1.ipcRenderer.invoke('claude:resume'),
         stop: () => electron_1.ipcRenderer.invoke('claude:stop'),
         query: (projectPath, prompt, systemPrompt, modelId) => electron_1.ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt, modelId),
-        queryCancel: () => electron_1.ipcRenderer.invoke('claude:query:cancel'),
+        queryCancel: (projectPath) => electron_1.ipcRenderer.invoke('claude:query:cancel', projectPath),
         authStatus: () => electron_1.ipcRenderer.invoke('claude:auth:status'),
         authLogin: () => electron_1.ipcRenderer.invoke('claude:auth:login'),
         authLoginStart: () => electron_1.ipcRenderer.invoke('claude:auth:login:start'),
         authLoginCancel: () => electron_1.ipcRenderer.invoke('claude:auth:login:cancel'),
         models: () => electron_1.ipcRenderer.invoke('claude:models'),
+        invokeSkill: (projectPath, skillName, userInput) => electron_1.ipcRenderer.invoke('claude:invokeSkill', projectPath, skillName, userInput),
         onAuthOutput: (callback) => {
             const handler = (_event, ...args) => callback(...args);
             electron_1.ipcRenderer.on('claude:auth:output', handler);
@@ -122,6 +123,7 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
     // Project operations
     project: {
         create: (name, path) => electron_1.ipcRenderer.invoke('project:create', name, path),
+        registerPath: (path) => electron_1.ipcRenderer.invoke('project:registerPath', path),
     },
 });
 // Load GitHub token on startup

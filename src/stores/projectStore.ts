@@ -3,6 +3,16 @@ import { persist } from 'zustand/middleware';
 import type { Project, Task, Prompt, ProjectStatus, OpenProject } from '@/types';
 import { useWorkflowStore } from './workflowStore';
 
+// Generate a consistent project ID from path (so reopening same folder preserves data)
+export function generateProjectId(path: string): string {
+  let hash = 0;
+  for (let i = 0; i < path.length; i++) {
+    hash = ((hash << 5) - hash) + path.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return `project-${Math.abs(hash).toString(36)}`;
+}
+
 interface ProjectState {
   // Existing state
   currentProject: Project | null;
@@ -102,6 +112,11 @@ export const useProjectStore = create<ProjectState>()(
       openProject: (project) => {
         const state = get();
         const exists = state.openProjects.find(p => p.id === project.id);
+
+        // Register the project path with Electron (required for file access)
+        if (window.electron?.project?.registerPath) {
+          window.electron.project.registerPath(project.path).catch(console.warn);
+        }
 
         // Sync workflow store
         const workflowStore = useWorkflowStore.getState();
@@ -272,11 +287,53 @@ export const useProjectStore = create<ProjectState>()(
     {
       name: 'vibes-projects',
       partialize: (state) => ({
-        // Persist only what's needed for session restoration
+        // Persist project state for session restoration
         openProjects: state.openProjects,
         activeProjectId: state.activeProjectId,
         recentProjects: state.recentProjects,
+        currentProject: state.currentProject, // Persist directly
       }),
     }
   )
 );
+
+// Initialize project paths on app startup
+// Call this once in App.tsx or main entry point
+export async function initializeProjectPaths(): Promise<void> {
+  if (!window.electron?.project?.registerPath) {
+    console.warn('[ProjectStore] Electron project API not available');
+    return;
+  }
+
+  const state = useProjectStore.getState();
+  const pathsToRegister = new Set<string>();
+
+  // Collect all project paths from open projects
+  for (const project of state.openProjects) {
+    if (project.path) {
+      pathsToRegister.add(project.path);
+    }
+  }
+
+  // Also register paths from recent projects
+  for (const project of state.recentProjects) {
+    if (project.path) {
+      pathsToRegister.add(project.path);
+    }
+  }
+
+  // Also register current project path
+  if (state.currentProject?.path) {
+    pathsToRegister.add(state.currentProject.path);
+  }
+
+  // Register all paths with Electron
+  console.log('[ProjectStore] Registering', pathsToRegister.size, 'project paths');
+  for (const path of pathsToRegister) {
+    try {
+      await window.electron.project.registerPath(path);
+    } catch (error) {
+      console.warn('[ProjectStore] Failed to register path:', path, error);
+    }
+  }
+}

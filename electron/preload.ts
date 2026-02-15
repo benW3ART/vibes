@@ -14,12 +14,14 @@ contextBridge.exposeInMainWorld('electron', {
     stop: () => ipcRenderer.invoke('claude:stop'),
     query: (projectPath: string, prompt: string, systemPrompt?: string, modelId?: string) =>
       ipcRenderer.invoke('claude:query', projectPath, prompt, systemPrompt, modelId),
-    queryCancel: () => ipcRenderer.invoke('claude:query:cancel'),
+    queryCancel: (projectPath?: string) => ipcRenderer.invoke('claude:query:cancel', projectPath),
     authStatus: () => ipcRenderer.invoke('claude:auth:status'),
     authLogin: () => ipcRenderer.invoke('claude:auth:login'),
     authLoginStart: () => ipcRenderer.invoke('claude:auth:login:start'),
     authLoginCancel: () => ipcRenderer.invoke('claude:auth:login:cancel'),
     models: () => ipcRenderer.invoke('claude:models'),
+    invokeSkill: (projectPath: string, skillName: string, userInput?: string) =>
+      ipcRenderer.invoke('claude:invokeSkill', projectPath, skillName, userInput),
     onAuthOutput: (callback: Listener) => {
       const handler = (_event: IpcRendererEvent, ...args: unknown[]) => callback(...args);
       ipcRenderer.on('claude:auth:output', handler);
@@ -139,6 +141,7 @@ contextBridge.exposeInMainWorld('electron', {
   // Project operations
   project: {
     create: (name: string, path: string) => ipcRenderer.invoke('project:create', name, path),
+    registerPath: (path: string) => ipcRenderer.invoke('project:registerPath', path),
   },
 });
 
